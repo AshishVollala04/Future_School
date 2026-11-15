@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * FutureSchool design system.
+ * Principles: generous space and big confident headings; crisp type with tight tracking;
+ * soft rounded cards with fine borders; tactile buttons that press; rich blue gradients;
+ * subtle motion (and none when the user asks for reduced motion).
+ */
+@theme {
+  /* Telugu falls back to Noto Sans Telugu, so it looks as crafted as English. */
+  --font-sans: "Plus Jakarta Sans", "Noto Sans Telugu", ui-sans-serif, system-ui, sans-serif;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 10px 30px -14px rgb(15 23 42 / 0.12);
+  --shadow-float: 0 12px 40px -12px rgb(30 58 138 / 0.28);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-slate-200, #e2e8f0);
+  }
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+  :focus-visible {
+    outline: 3px solid rgb(37 99 235 / 0.45);
+    outline-offset: 2px;
+  }
+  .dark * {
+    border-color: var(--color-slate-800, #1e293b);
+  }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* Safe area support for iOS/mobile devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* Horizontal chip/card rows: scroll by swipe without a visible scrollbar. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Blue hero surface: a gradient with soft light glows (headers, sign-in). */
+@utility hero-glow {
+  background-color: #1d4ed8;
+  background-image:
+    radial-gradient(55% 90% at 90% 0%, rgb(125 211 252 / 0.55), transparent 60%),
+    radial-gradient(50% 80% at 0% 100%, rgb(129 140 248 / 0.5), transparent 62%),
+    linear-gradient(135deg, #1e40af 0%, #2563eb 55%, #3b82f6 100%);
+}
+
+/* Tactile primary button: a solid edge underneath that the button presses into. */
+@utility btn-press {
+  box-shadow: 0 4px 0 0 #1e3a8a;
+  transition: transform 80ms ease, box-shadow 80ms ease, background-color 150ms ease;
+  &:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 0 #1e3a8a;
+  }
+  &:disabled {
+    box-shadow: none;
+  }
+}
+
+/* Content enters with a short rise; screens feel alive, never slow. */
+@keyframes fs-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@utility fs-rise {
+  animation: fs-rise 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Cards that lift slightly under the pointer. */
+@utility lift {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
+  &:active {
+    transform: translateY(0) scale(0.99);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

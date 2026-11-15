@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1d4ed8" />
+    <title>Offline | FutureSchool</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+        display: grid;
+        place-items: center;
+        min-height: 100dvh;
+        padding: 1.5rem;
+      }
+      .card {
+        max-width: 24rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        padding: 1.75rem;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+      }
+      h1 { margin: 0 0 0.5rem; font-size: 1.25rem; }
+      p { margin: 0 0 1.25rem; font-size: 0.925rem; color: #475569; line-height: 1.5; }
+      button {
+        border: 0;
+        border-radius: 0.75rem;
+        padding: 0.75rem 1.25rem;
+        background: #1d4ed8;
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.925rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>You are offline</h1>
+      <p>FutureSchool needs an internet connection to load live attendance, marks, hall tickets, and fees.</p>
+      <button type="button" onclick="window.location.reload()">Try again</button>
+    </main>
+  </body>
+</html>

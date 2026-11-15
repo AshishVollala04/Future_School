@@ -1,0 +1,32 @@
+// Service-level rule checks (mock implementations). Run all with: npm run test:services
+const SRC = new URL('../../src/', import.meta.url).href;
+const mem: Record<string, string> = {};
+(globalThis as any).window = { location: { origin: 'http://x' }, dispatchEvent: () => true, localStorage: { getItem: (k: string) => (k in mem ? mem[k] : null), setItem: (k: string, v: string) => { mem[k] = v; }, removeItem: (k: string) => { delete mem[k]; }, key: (i: number) => Object.keys(mem)[i] ?? null, get length() { return Object.keys(mem).length; } } };
+const u = (p: string) => SRC + p;
+const { authService } = await import(u('services/authService.ts'));
+const { pickupService: ps } = await import(u('services/pickupService.ts'));
+let fails = 0;
+const check = (n: string, c: boolean, x?: any) => { if (!c) fails++; console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : '  -> ' + JSON.stringify(x))); };
+const code = (c: any) => c.mockHint.match(/\d{6}/)[0];
+// Real parent session so step-up works.
+const ch: any = await authService.requestMobileOtp('9876543210', 'PARENT_LOGIN');
+const v: any = await authService.verifyParentOtp(ch.data.challengeId, code(ch.data));
+const s: any = await authService.startParentSession(v.data.ticket, 'GVS-2027-0001');
+const P = { schoolId: 'GVS', role: 'PARENT', userId: s.data.userId, studentId: 'GVS-2027-0001' } as any;
+const stepUp = async (purpose: string) => { const c: any = await authService.requestStepUp(s.data.sessionId, purpose); return ((await authService.verifyStepUp(s.data.sessionId, c.data.challengeId, code(c.data))) as any).data.stepUpToken; };
+const req = { personName: 'Vikram Sharma', relation: 'Uncle', mobile: '9845077112', reason: 'Parents at hospital' };
+check('needs pickup OTP', ((await ps.issuePass(P, req, 'bad')) as any).code === 'STEP_UP_REQUIRED');
+check('payment OTP rejected', ((await ps.issuePass(P, req, await stepUp('PAYMENT'))) as any).code === 'STEP_UP_REQUIRED');
+const r: any = await ps.issuePass(P, req, await stepUp('PICKUP_AUTHORIZATION'));
+check('pass issued with 8-char code', r.ok && r.data.code.length === 8, r);
+check('code not stored in list', !JSON.stringify(((await ps.getMine(P)) as any).data).includes(r.data.code));
+const STAFF = { schoolId: 'GVS', role: 'TEACHER', userId: 'STF-T-0001' } as any;
+check('parent cannot verify', !((await ps.verifyAtGate(P, r.data.code)) as any).ok);
+const ok: any = await ps.verifyAtGate(STAFF, r.data.code.toLowerCase());
+check('gate accepts once', ok.ok && ok.data.status === 'USED' && ok.data.studentName === 'Aarav Sharma', ok);
+check('second use refused', ((await ps.verifyAtGate(STAFF, r.data.code)) as any).code === 'USED');
+const r2: any = await ps.issuePass(P, req, await stepUp('PICKUP_AUTHORIZATION'));
+check('cancel', ((await ps.cancelPass(P, r2.data.id)) as any).data.status === 'CANCELLED');
+check('cancelled refused at gate', ((await ps.verifyAtGate(STAFF, r2.data.code)) as any).code === 'CANCELLED');
+check('other school cannot see', ((await ps.verifyAtGate({ ...STAFF, schoolId: 'SJM' }, r.data.code)) as any).code === 'INVALID');
+console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');

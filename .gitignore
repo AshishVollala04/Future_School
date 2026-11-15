@@ -1,0 +1,26 @@
+# Dependencies
+**/node_modules/
+**/dist/
+**/.vite/
+**/package-lock.json
+!Frontend/package-lock.json
+
+# Java / Spring Boot Build Outputs
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+**/.mvn/wrapper/maven-wrapper.jar
+
+# Environment & Logs
+**/.env
+**/.env.local
+**/*.log
+
+# IDE & OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+backups/
