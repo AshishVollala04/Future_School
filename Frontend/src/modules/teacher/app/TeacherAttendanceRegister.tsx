@@ -71,16 +71,13 @@ export const TeacherAttendanceRegister: React.FC = () => {
   const cycle = (r: typeof rows[0]) => {
     setMarks(prev => {
       const cur = prev[r.studentId];
-      if (r.leave) {
-        // Approved leave: default is 'L'. Cycle: L -> P -> A -> L
-        if (!cur || cur === 'L') return { ...prev, [r.studentId]: 'P' };
-        if (cur === 'P') return { ...prev, [r.studentId]: 'A' };
-        return { ...prev, [r.studentId]: 'L' };
-      } else {
-        // No approved leave: first tap is Present ('P'), next tap is Absent ('A')
-        if (!cur || cur === 'A') return { ...prev, [r.studentId]: 'P' };
-        return { ...prev, [r.studentId]: 'A' };
-      }
+      // When unmarked: first tap is Present ('P')
+      if (!cur) return { ...prev, [r.studentId]: 'P' };
+      // For approved leave: tapping when on 'L' transitions directly to 'P' (Present)
+      if (cur === 'L' && r.leave) return { ...prev, [r.studentId]: 'P' };
+      // Standard tap cycle: Present ('P') -> Absent ('A') -> Leave ('L') -> Late ('LATE') -> Present ('P')
+      const next = CYCLE[(CYCLE.indexOf(cur) + 1) % CYCLE.length];
+      return { ...prev, [r.studentId]: next };
     });
   };
 
@@ -148,6 +145,10 @@ export const TeacherAttendanceRegister: React.FC = () => {
                     {r.leave ? (
                       <span className="block text-xs font-semibold text-sky-800 dark:text-sky-300">
                         ✓ Approved leave ({r.leave.fromDate} to {r.leave.toDate}) · Auto-applied
+                      </span>
+                    ) : m === 'L' ? (
+                      <span className="block text-xs font-semibold text-sky-700 dark:text-sky-400">
+                        Leave (marked by teacher)
                       </span>
                     ) : (
                       <span className="block text-xs text-slate-400">
