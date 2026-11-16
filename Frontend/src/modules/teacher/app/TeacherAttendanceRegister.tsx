@@ -150,11 +150,7 @@ export const TeacherAttendanceRegister: React.FC = () => {
                       <span className="block text-xs font-semibold text-sky-700 dark:text-sky-400">
                         Leave (marked by teacher)
                       </span>
-                    ) : (
-                      <span className="block text-xs text-slate-400">
-                        No approved leave applied
-                      </span>
-                    )}
+                    ) : null}
                   </span>
                   <span className={`min-w-20 text-center px-2 py-1.5 rounded-lg border text-sm font-semibold ${m ? STYLE[m] : 'border-dashed border-slate-300 text-slate-400'}`}>
                     {m ? LABEL[m] : 'Tap'}
