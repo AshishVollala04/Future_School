@@ -19,6 +19,7 @@ Welcome to the official technical and product documentation library for **Future
 | **08** | **AI Guardrails Document** | [08_AI_GUARDRAILS_DOCUMENT.md](08_AI_GUARDRAILS_DOCUMENT.md) | Gemini API integration, PII redaction, teacher-in-the-loop, temperature tuning. |
 | **09** | **Feature Ticket List** | [09_FEATURE_TICKET_LIST.md](09_FEATURE_TICKET_LIST.md) | Agile Scrum backlog, 10 Epics, user stories with acceptance criteria, story points. |
 | **10** | **Deployment & Testing Document** | [10_DEPLOYMENT_AND_TESTING_DOCUMENT.md](10_DEPLOYMENT_AND_TESTING_DOCUMENT.md) | CI/CD pipeline, 82 Spring tests + 325 UI tests, Nginx config, disaster recovery. |
+| **11** | **Feature Testing & Execution Guide** | [11_FEATURE_TESTING_GUIDE.md](11_FEATURE_TESTING_GUIDE.md) | Step-by-step test runbook, exact demo logins for all 6 roles, and live verification scenarios. |
 
 ---
 
