@@ -43,7 +43,14 @@ export const TeacherAttendanceRegister: React.FC = () => {
 
   useEffect(() => {
     const m: Record<string, AttendanceMark> = {};
-    reg.data?.rows.forEach(r => r.mark && (m[r.studentId] = r.mark));
+    reg.data?.rows.forEach(r => {
+      if (r.mark) {
+        m[r.studentId] = r.mark;
+      } else if (r.leave) {
+        // Auto-update to 'L' (Leave) if teacher approved leave for this student
+        m[r.studentId] = 'L';
+      }
+    });
     setMarks(m);
     setReason('');
     setError(null);
@@ -61,8 +68,31 @@ export const TeacherAttendanceRegister: React.FC = () => {
   if (a.status === 'loading') return <LoadingBlock />;
   if (!ct) return <EmptyState title="Attendance is recorded by the Class Teacher" />;
 
-  const cycle = (id: string) => setMarks(m => ({ ...m, [id]: m[id] ? CYCLE[(CYCLE.indexOf(m[id]) + 1) % CYCLE.length] : 'A' }));
-  const allPresent = () => setMarks(m => Object.fromEntries(rows.map(r => [r.studentId, m[r.studentId] && m[r.studentId] !== 'P' ? m[r.studentId] : 'P'])));
+  const cycle = (r: typeof rows[0]) => {
+    setMarks(prev => {
+      const cur = prev[r.studentId];
+      if (r.leave) {
+        // Approved leave: default is 'L'. Cycle: L -> P -> A -> L
+        if (!cur || cur === 'L') return { ...prev, [r.studentId]: 'P' };
+        if (cur === 'P') return { ...prev, [r.studentId]: 'A' };
+        return { ...prev, [r.studentId]: 'L' };
+      } else {
+        // No approved leave: first tap is Present ('P'), next tap is Absent ('A')
+        if (!cur || cur === 'A') return { ...prev, [r.studentId]: 'P' };
+        return { ...prev, [r.studentId]: 'A' };
+      }
+    });
+  };
+
+  const allPresent = () =>
+    setMarks(m =>
+      Object.fromEntries(
+        rows.map(r => [
+          r.studentId,
+          r.leave && (!m[r.studentId] || m[r.studentId] === 'L') ? 'L' : 'P'
+        ])
+      )
+    );
 
   const save = async () => {
     setBusy(true);
@@ -111,11 +141,19 @@ export const TeacherAttendanceRegister: React.FC = () => {
             {rows.map(r => {
               const m = marks[r.studentId];
               return (
-                <button key={r.studentId} onClick={() => cycle(r.studentId)} className="w-full min-h-14 px-3.5 py-2 flex items-center gap-3 text-left hover:bg-slate-50">
+                <button key={r.studentId} onClick={() => cycle(r)} className="w-full min-h-14 px-3.5 py-2 flex items-center gap-3 text-left hover:bg-slate-50">
                   <span className="w-8 text-sm font-mono text-slate-500">{r.rollNumber}</span>
                   <span className="flex-1 min-w-0">
                     <span className="block font-medium truncate">{r.name}</span>
-                    {r.leave && <span className="block text-xs text-sky-800">Approved leave ({r.leave.fromDate} to {r.leave.toDate}). Not applied automatically.</span>}
+                    {r.leave ? (
+                      <span className="block text-xs font-semibold text-sky-800 dark:text-sky-300">
+                        ✓ Approved leave ({r.leave.fromDate} to {r.leave.toDate}) · Auto-applied
+                      </span>
+                    ) : (
+                      <span className="block text-xs text-slate-400">
+                        No approved leave applied
+                      </span>
+                    )}
                   </span>
                   <span className={`min-w-20 text-center px-2 py-1.5 rounded-lg border text-sm font-semibold ${m ? STYLE[m] : 'border-dashed border-slate-300 text-slate-400'}`}>
                     {m ? LABEL[m] : 'Tap'}
