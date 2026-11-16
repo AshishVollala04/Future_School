@@ -172,13 +172,12 @@ export const StudentHallTicket: React.FC = () => {
             {!isFeesCleared && (
               <button
                 onClick={() => navigate('/student/fees')}
-                className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                className="w-full sm:flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
               >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>Clear Fees Now</span>
+                <Building2 className="w-3.5 h-3.5" />
+                <span>View Pending Dues & Counter Payment Details</span>
               </button>
             )}
-            
           </div>
         </Card>
       ) : (

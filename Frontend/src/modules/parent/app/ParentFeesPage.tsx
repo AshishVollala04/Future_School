@@ -8,7 +8,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, Download, Receipt, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Download, Receipt, ShieldCheck, Lock, AlertCircle, Building2 } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
 import { useAuth } from '../../../context/AuthContext';
@@ -258,36 +258,45 @@ export const ParentFeesPage: React.FC = () => {
           </Section>
 
           {payable.length > 0 ? (
-            <Panel className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold">{t('parent.fees.pay')}</h2>
-                {!USE_BACKEND && <MockLabel />}
+            <Panel className="p-4 space-y-3.5 border-rose-200 bg-rose-50/50 dark:bg-rose-950/20">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Examination Hall Ticket Locked
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    Pending fee balance: <strong className="text-rose-600 font-bold">{formatINR(s.totalOutstanding)}</strong>. Hall tickets remain locked until outstanding dues are cleared.
+                  </p>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100">
-                {(['TERMS', 'PARTIAL'] as const).map(m => (
-                  <button key={m} onClick={() => setMode(m)} className={`min-h-11 rounded-lg text-sm font-semibold ${mode === m ? 'bg-white text-blue-800 shadow-sm' : 'text-slate-600'}`}>
-                    {t(`parent.fees.mode_${m}`)}
-                  </button>
-                ))}
+
+              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs space-y-2">
+                <p className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <span>How to Pay & Unlock Hall Ticket:</span>
+                </p>
+                <ol className="list-decimal pl-4 space-y-1 text-slate-600 dark:text-slate-300">
+                  <li>Visit the school fee counter or pay via direct school bank transfer/campus QR code.</li>
+                  <li>Provide your ward's admission number to the school accountant.</li>
+                  <li>Once the fee office records the receipt, your balance updates to <strong>₹0</strong> and the <strong>Examination Hall Ticket will automatically unlock</strong>.</li>
+                </ol>
               </div>
-              {mode === 'PARTIAL' && (
-                <label className="block">
-                  <span className="block text-sm font-semibold text-slate-700 mb-1.5">{t('parent.fees.amount')}</span>
-                  <input inputMode="numeric" value={partial} onChange={e => setPartial(e.target.value.replace(/\D/g, '').slice(0, 7))} placeholder={String(PARTIAL_PAYMENT_MINIMUM)} className={inputClass} />
-                  <span className="block text-xs text-slate-500 mt-1">{t('parent.fees.partialHelp', { min: formatINR(PARTIAL_PAYMENT_MINIMUM) })}</span>
-                </label>
-              )}
-              <ErrorBox message={error} />
-              <PrimaryButton
-                onClick={startPayment}
-                loading={busy && !order}
-                disabled={mode === 'TERMS' ? selected.length === 0 : !partial}
-              >
-                {mode === 'TERMS' ? t('parent.fees.continueAmount', { amount: formatINR(selectedTotal) }) : t('parent.fees.continue')}
-              </PrimaryButton>
             </Panel>
           ) : (
-            <EmptyState title={t('parent.fees.allPaid')} icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />} />
+            <Panel className="p-4 border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-3 text-emerald-800 dark:text-emerald-300">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
+                <div>
+                  <h3 className="text-sm font-bold">{t('parent.fees.allPaid')}</h3>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    Zero balance remaining. Examination Hall Tickets are cleared for release.
+                  </p>
+                </div>
+              </div>
+            </Panel>
           )}
         </>
       ) : history.status === 'loading' ? (

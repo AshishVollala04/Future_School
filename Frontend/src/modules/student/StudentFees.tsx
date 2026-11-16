@@ -15,7 +15,8 @@ import {
   Building,
   RotateCw,
   QrCode,
-  ArrowRight
+  ArrowRight,
+  Lock
 } from 'lucide-react';
 
 export const StudentFees: React.FC = () => {
@@ -92,20 +93,14 @@ export const StudentFees: React.FC = () => {
         }
         actions={
           fees.pendingAmount > 0 ? (
-            <button
-              onClick={() => {
-                setShowPaymentModal(true);
-                setPaymentSuccess(false);
-              }}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>Pay Outstanding Dues (₹{fees.pendingAmount.toLocaleString()})</span>
-            </button>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-800">
+              <Lock className="w-4 h-4 text-rose-600" />
+              <span>Hall Ticket Locked (₹{fees.pendingAmount.toLocaleString()} Due)</span>
+            </div>
           ) : (
             <div className="flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800">
               <CheckCircle2 className="w-4 h-4" />
-              <span>All Dues Settled</span>
+              <span>All Dues Settled · Hall Ticket Cleared</span>
             </div>
           )
         }
@@ -138,27 +133,21 @@ export const StudentFees: React.FC = () => {
 
       {/* Hall Ticket Clearance Alert */}
       {fees.pendingAmount > 0 ? (
-        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+            <Lock className="w-5 h-5 text-rose-600 shrink-0" />
             <div>
               <div className="text-xs font-bold text-slate-900 dark:text-white">
-                Exam Hall Ticket Clearance Blocked
+                Exam Hall Ticket Locked · Payment at Counter Required
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Clear the pending instalment of <strong>₹{fees.pendingAmount.toLocaleString()}</strong> to unlock the Term 1 examination hall ticket.
+                Clear the pending instalment of <strong>₹{fees.pendingAmount.toLocaleString()}</strong> at the school fee counter or campus QR code to automatically unlock the hall ticket.
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setShowPaymentModal(true);
-              setPaymentSuccess(false);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer"
-          >
-            Pay Now
-          </button>
+          <div className="px-3 py-1.5 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 text-xs font-bold border border-rose-300 dark:border-rose-800 shrink-0">
+            Pay at Counter
+          </div>
         </div>
       ) : (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-800 dark:text-emerald-300 text-xs">

@@ -68,11 +68,12 @@ graph TD
   - *General Science (100 Marks)* = *Physical Science (50 Marks: 10 Internal + 40 External)* + *Biological Science (50 Marks: 10 Internal + 40 External)*.
 - Swipeable report cards with grade distribution (A1, A2, B1, B2, C1, C2, D, E), attendance %, and teacher remarks.
 
-#### Module 4: Fee Management & UPI Payments
-- Term 1, Term 2, Term 3, Term 4 fee instalment schedule.
-- Direct UPI checkout via Razorpay with step-up parent PIN verification.
-- Instant digital fee receipt PDF generation with unique transaction ID, QR verification code, and school seal.
-- Partial payment tracking, late fee calculation, and scholarship/concession discounts.
+#### Module 4: Fee Tracking & Automated Examination Hall Ticket Lock
+- Term 1, Term 2, Term 3, Term 4 instalment schedule with real-time balance tracking.
+- **Automated Hall Ticket Lock:** If any term fee balance is pending (> ₹0), the examination admit card / hall ticket is strictly withheld from student and parent download.
+- **Offline Counter Clearance:** Parents settle dues at the school fee counter or via school's direct campus bank account QR; school accountants record cash/bank receipts in the Fee Desk in under 30 seconds.
+- **Instant Auto-Unlock:** The moment the office records the payment, the student's fee clearance switches to `CLEARED` and the Hall Ticket automatically unlocks for printing.
+- Eliminates 2% payment gateway commissions, gateway merchant KYC delays, and payment failure disputes.
 
 #### Module 5: Automated Attendance & WhatsApp Alerts
 - Class teacher marks attendance in under 60 seconds with 1-tap "Mark All Present" toggle.
