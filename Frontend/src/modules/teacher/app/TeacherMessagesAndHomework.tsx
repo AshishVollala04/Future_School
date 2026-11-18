@@ -36,7 +36,7 @@ export const TeacherMessages: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4 max-w-3xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold">Messages from parents</h1>
         <p className="text-sm text-slate-600">Only conversations addressed to you. Fees, leave and complaints have their own workflows.</p>
@@ -121,7 +121,7 @@ export const TeacherHomework: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl xl:max-w-6xl">
       <div>
         <p className="text-sm font-semibold text-blue-800">My Teaching</p>
         <h1 className="text-xl font-bold">Homework</h1>

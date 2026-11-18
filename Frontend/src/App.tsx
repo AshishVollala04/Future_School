@@ -79,6 +79,7 @@ const ParentTransport = React.lazy(() => import('./modules/parent/app/ParentTran
 const ParentComplaints = React.lazy(() => import('./modules/parent/app/ParentComplaintsPage').then(m => ({ default: m.ParentComplaintsPage })));
 const ParentMeetings = React.lazy(() => import('./modules/parent/app/ParentPickupAndMeetings').then(m => ({ default: m.ParentMeetingsPage })));
 const ParentPickup = React.lazy(() => import('./modules/parent/app/ParentPickupAndMeetings').then(m => ({ default: m.ParentPickupPage })));
+const ParentProfile = React.lazy(() => import('./modules/parent/app/ParentProfilePage').then(m => ({ default: m.ParentProfilePage })));
 
 // === LAZY: Teacher Modules ===
 const TeacherLayout = React.lazy(() => import('./modules/teacher/app/TeacherLayout').then(m => ({ default: m.TeacherLayout })));
@@ -218,6 +219,7 @@ export default function App() {
                 <Route path="consent" element={<ParentConsentPage />} />
                 <Route path="meetings" element={<ParentMeetings />} />
                 <Route path="pickup" element={<ParentPickup />} />
+                <Route path="profile" element={<ParentProfile />} />
                 <Route path="transport" element={<ParentTransport />} />
                 <Route path="complaints" element={<ParentComplaints />} />
                 <Route path="notices" element={<ParentNoticesPage />} />

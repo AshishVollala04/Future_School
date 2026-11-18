@@ -5,9 +5,9 @@
  * Bottom: Home, Academics, Fees, Messages, More. On desktop the same layout is centred.
  */
 import React, { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, ChevronLeft, Home, IndianRupee, MessageSquare, MoreHorizontal, RotateCw } from 'lucide-react';
+import { Bell, BookOpen, ChevronLeft, Home, IndianRupee, MessageSquare, MoreHorizontal, RotateCw } from 'lucide-react';
 import { isParentTab, useGoBack } from '../../../app/backNavigation';
 import { useAuth } from '../../../context/AuthContext';
 import { useTenant } from '../../../context/TenantContext';
@@ -18,6 +18,7 @@ import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
 import { authService } from '../../../services/authService';
 import { PinSetupScreen } from '../../auth/PinSetupScreen';
+import { readStudentPhoto } from '../../../utils/studentPhoto';
 
 const TABS = [
   { to: '/parent/home', key: 'home', icon: Home },
@@ -67,6 +68,7 @@ const ParentApp: React.FC = () => {
   const location = useLocation();
   const [switching, setSwitching] = useState<string | null>(null);
   const child = currentUser?.activeChild;
+  const childPhoto = child ? readStudentPhoto(child.id) : null;
   const onHome = location.pathname.startsWith('/parent/home');
   const subPage = !isParentTab(location.pathname);
   const goBack = useGoBack('/parent/more');
@@ -81,8 +83,8 @@ const ParentApp: React.FC = () => {
 
   return (
     <div className="min-h-dvh bg-slate-100 text-slate-900">
-      <div className="mx-auto max-w-xl min-h-dvh bg-slate-50 flex flex-col sm:border-x sm:border-slate-200">
-        <header className="relative hero-glow text-white px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-9">
+      <div className="mx-auto w-full max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl min-h-dvh bg-slate-50 flex flex-col md:border-x md:border-slate-200 md:shadow-sm">
+        <header className="relative hero-glow text-white px-4 md:px-8 pt-[max(0.5rem,env(safe-area-inset-top))] pb-9">
           <div className="flex items-center justify-between gap-2 min-h-10">
             {subPage && (
               <button
@@ -117,7 +119,18 @@ const ParentApp: React.FC = () => {
                   </>
                 )}
               </span>
-              <img src={child.avatar} alt="" className="w-12 h-12 rounded-full bg-white/90 ring-2 ring-white/70 shrink-0" />
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  to="/parent/notices"
+                  aria-label={t('parent.more.notices')}
+                  className="relative w-11 h-11 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white"
+                >
+                  <Bell className="w-5 h-5" />
+                </Link>
+                <Link to="/parent/profile" aria-label="Student profile" className="shrink-0 rounded-full">
+                  <img src={childPhoto ?? child.avatar} alt="" className="w-12 h-12 rounded-full bg-white/90 ring-2 ring-white/70 object-cover" />
+                </Link>
+              </div>
             </div>
           )}
           {linkedChildren.length > 1 && (
@@ -155,7 +168,7 @@ const ParentApp: React.FC = () => {
           <HeaderWave />
         </header>
 
-        <main className="flex-1 px-4 pt-1 pb-28" key={`${session?.schoolId}:${session?.studentId}`}>
+        <main className="flex-1 px-4 md:px-8 pt-1 pb-28" key={`${session?.schoolId}:${session?.studentId}`}>
           {tenant.status === 'loading' ? (
             <LoadingBlock />
           ) : tenant.status === 'error' ? (
@@ -168,7 +181,7 @@ const ParentApp: React.FC = () => {
         </main>
 
         <nav
-          className="fixed bottom-0 inset-x-0 z-30 mx-auto max-w-xl bg-white/85 backdrop-blur-xl border-t border-slate-200/70 shadow-[0_-8px_30px_-18px_rgb(15_23_42/0.25)] grid grid-cols-5 pb-[env(safe-area-inset-bottom)]"
+          className="fixed bottom-0 inset-x-0 z-30 mx-auto w-full max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl bg-white/85 backdrop-blur-xl border-t border-slate-200/70 shadow-[0_-8px_30px_-18px_rgb(15_23_42/0.25)] grid grid-cols-5 pb-[env(safe-area-inset-bottom)]"
           aria-label={t('parent.mainNav')}
         >
           {TABS.map(({ to, key, icon: Icon }) => (

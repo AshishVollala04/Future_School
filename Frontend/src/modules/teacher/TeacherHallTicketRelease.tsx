@@ -40,7 +40,7 @@ export const TeacherHallTicketRelease: React.FC = () => {
   const released = rows.filter(r => r.release).length;
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4 max-w-3xl xl:max-w-6xl">
       <div>
         <p className="text-sm font-semibold text-blue-800">My Class Teacher responsibility</p>
         <h1 className="text-xl font-bold">

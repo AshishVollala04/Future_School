@@ -28,7 +28,7 @@ export const AdminTransport: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold">Transport</h1>
         <p className="text-sm text-slate-600">Seats are checked again when you approve. Fee changes for later instalments go through Finance.</p>

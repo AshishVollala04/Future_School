@@ -32,7 +32,7 @@ export const TeacherMyLeave: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl xl:max-w-6xl">
       <h1 className="text-xl font-bold">My leave</h1>
       <form onSubmit={apply}>
         <Panel className="p-4 space-y-3">

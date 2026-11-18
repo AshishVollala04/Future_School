@@ -42,7 +42,7 @@ export const AdminHome: React.FC = () => {
   const fin = ov.data?.finance;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold">Work queue</h1>
         <p className="text-sm text-slate-600">You can operate: {access.data.permissions.map(p => PERMISSION_LABEL[p]).join(', ') || 'nothing yet'}.</p>

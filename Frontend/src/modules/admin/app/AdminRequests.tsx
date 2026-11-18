@@ -94,7 +94,7 @@ export const AdminRequests: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-4 max-w-4xl xl:max-w-6xl">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold">Changes needing approval</h1>

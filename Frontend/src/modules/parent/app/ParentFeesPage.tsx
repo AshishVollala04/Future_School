@@ -8,7 +8,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, Download, Receipt, ShieldCheck, Lock, AlertCircle, Building2 } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Download, Receipt, ShieldCheck, Lock, AlertCircle, Building2 } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
 import { useAuth } from '../../../context/AuthContext';
@@ -276,11 +276,11 @@ export const ParentFeesPage: React.FC = () => {
               <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs space-y-2">
                 <p className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                   <Building2 className="w-4 h-4 text-blue-600" />
-                  <span>How to Pay & Unlock Hall Ticket:</span>
+                  <span>How to pay and unlock your hall ticket:</span>
                 </p>
                 <ol className="list-decimal pl-4 space-y-1 text-slate-600 dark:text-slate-300">
-                  <li>Visit the school fee counter or pay via direct school bank transfer/campus QR code.</li>
-                  <li>Provide your ward's admission number to the school accountant.</li>
+                  <li>Visit the school fee counter, or pay by direct bank transfer or campus QR code.</li>
+                  <li>Give your child's admission number to the school accountant.</li>
                   <li>Once the fee office records the receipt, your balance updates to <strong>₹0</strong> and the <strong>Examination Hall Ticket will automatically unlock</strong>.</li>
                 </ol>
               </div>
@@ -417,6 +417,13 @@ export const ParentFeesPage: React.FC = () => {
               className="w-full min-h-11 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 font-semibold inline-flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4" /> Print / Download Receipt PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => setReceipt(null)}
+              className="w-full min-h-11 rounded-xl border border-slate-200 bg-white text-slate-800 font-semibold inline-flex items-center justify-center gap-2"
+            >
+              <ChevronLeft className="w-4 h-4" /> {t('common.back')}
             </button>
           </div>
         )}

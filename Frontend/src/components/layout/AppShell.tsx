@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { LanguageToggle } from '../common/LanguageToggle';
 import { SensitiveActionModal } from '../common/SensitiveActionModal';
+import { ConfirmDialog } from '../ui/Modal';
 
 export const AppShell: React.FC = () => {
   const { session, currentUser, currentRole, logout, switchActiveChild, linkedChildren } = useAuth();
@@ -49,6 +50,7 @@ export const AppShell: React.FC = () => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     return document.documentElement.classList.contains('dark');
   });
@@ -205,7 +207,7 @@ export const AppShell: React.FC = () => {
 
                   <div className="pt-1">
                     <button
-                      onClick={handleLogout}
+                      onClick={() => setConfirmLogout(true)}
                       className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
@@ -323,7 +325,7 @@ export const AppShell: React.FC = () => {
 
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
-                  onClick={handleLogout}
+                  onClick={() => setConfirmLogout(true)}
                   className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-xl"
                 >
                   <LogOut className="w-4 h-4" />
@@ -335,7 +337,7 @@ export const AppShell: React.FC = () => {
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 pb-24">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 pb-24 xl:p-10">
           {activeChild && (
             <button
               type="button"
@@ -371,6 +373,15 @@ export const AppShell: React.FC = () => {
           </div>
         </main>
 
+        <ConfirmDialog
+          isOpen={confirmLogout}
+          onClose={() => setConfirmLogout(false)}
+          onConfirm={handleLogout}
+          title="Log out?"
+          description="You will need to sign in again to continue."
+          confirmLabel="Log out"
+          variant="danger"
+        />
         {childSwitcherOpen && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
             <div className="fixed inset-0 bg-slate-950/50" onClick={() => setChildSwitcherOpen(false)} />

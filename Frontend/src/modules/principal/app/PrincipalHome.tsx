@@ -1,13 +1,16 @@
 /**
  * Principal home: "Action Required" inbox first, then Today's School, Academic and Financial overview.
+ * The Action Required cards appear only while approvals are pending; with nothing pending the section is not shown.
  * Operational figures only. No ranking or scoring of students, teachers or parents.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
 import { staffService } from '../../../services/staffService';
+import { onStaffDataChanged } from '../../../app/staffEvents';
 import { EmptyState, ErrorState, LoadingBlock, Panel, Pill, Section } from '../../../components/common/States';
 import { formatDate, formatINR } from '../../../utils/date';
 
@@ -20,31 +23,34 @@ const Stat: React.FC<{ label: string; value: string; hint?: string }> = ({ label
 );
 
 export const PrincipalHome: React.FC = () => {
+  const { t } = useTranslation();
   const scope = useScope();
   const q = useQuery(() => staffService.getOverview(scope), [scope.schoolId]);
+  const reload = q.reload;
+  useEffect(() => onStaffDataChanged(reload), [reload]);
+
   if (q.status === 'loading') return <LoadingBlock />;
   if (q.status === 'error') return <ErrorState message={q.error} onRetry={q.reload} />;
   const o = q.data;
 
-  // Plain wording with real plurals: "1 mark correction to approve", "2 Admin requests to approve".
-  const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+  // Real plurals come from the translation files: "1 mark correction to approve", "2 Admin requests to approve".
   const actions = [
-    { n: o.counts.reportCards, to: '/principal/report-cards', title: plural(o.counts.reportCards, 'Report card waiting for your approval', 'Report cards waiting for your approval') },
-    { n: o.counts.corrections, to: '/principal/corrections', title: plural(o.counts.corrections, 'Mark correction to approve', 'Mark corrections to approve') },
-    { n: o.counts.governance, to: '/principal/requests', title: plural(o.counts.governance, 'Admin request to approve', 'Admin requests to approve') },
-    { n: o.counts.teacherLeave, to: '/principal/teacher-leave', title: plural(o.counts.teacherLeave, 'Teacher leave request', 'Teacher leave requests') }
+    { n: o.counts.reportCards, to: '/principal/report-cards', title: t('principal.home.reportCards', { count: o.counts.reportCards }) },
+    { n: o.counts.corrections, to: '/principal/corrections', title: t('principal.home.corrections', { count: o.counts.corrections }) },
+    { n: o.counts.governance, to: '/principal/requests', title: t('principal.home.governance', { count: o.counts.governance }) },
+    { n: o.counts.teacherLeave, to: '/principal/teacher-leave', title: t('principal.home.teacherLeave', { count: o.counts.teacherLeave }) }
   ].filter(a => a.n > 0);
 
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
+  const cardTone = (k: string) => (k === 'APPROVED' ? 'success' : k === 'RETURNED' ? 'danger' : k === 'SUBMITTED' ? 'info' : 'neutral');
+  const cardLabel = (k: string, n: number) => `${n} ${t(`principal.home.cardStatus.${k}`, { defaultValue: k.toLowerCase() })}`;
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <h1 className="text-xl font-bold">Good day</h1>
+      <h1 className="text-xl font-bold">{t('principal.home.goodDay')}</h1>
 
-      <Section title="Action required">
-        {actions.length === 0 ? (
-          <EmptyState title="Nothing waiting for you" />
-        ) : (
+      {actions.length > 0 && (
+        <Section title={t('principal.home.actionRequired')}>
           <ul className="space-y-2">
             {actions.map(a => (
               <li key={a.to}>
@@ -56,25 +62,29 @@ export const PrincipalHome: React.FC = () => {
               </li>
             ))}
           </ul>
-        )}
-      </Section>
+        </Section>
+      )}
 
-      <Section title={`Today's school · ${formatDate(o.attendance.date)}`}>
+      <Section title={t('principal.home.todaySchool', { date: formatDate(o.attendance.date) })}>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-          <Stat label="Morning registers" value={`${o.attendance.morningTaken}/${o.attendance.classesTotal}`} hint="classes recorded" />
-          <Stat label="Afternoon registers" value={`${o.attendance.afternoonTaken}/${o.attendance.classesTotal}`} hint="classes recorded" />
-          <Stat label="Present (recorded)" value={o.attendance.presentPct == null ? '—' : `${o.attendance.presentPct}%`} hint="of marked sessions" />
+          <Stat label={t('principal.home.morningRegisters')} value={`${o.attendance.morningTaken}/${o.attendance.classesTotal}`} hint={t('principal.home.classesRecorded')} />
+          <Stat label={t('principal.home.afternoonRegisters')} value={`${o.attendance.afternoonTaken}/${o.attendance.classesTotal}`} hint={t('principal.home.classesRecorded')} />
+          <Stat label={t('principal.home.presentRecorded')} value={o.attendance.presentPct == null ? '—' : `${o.attendance.presentPct}%`} hint={t('principal.home.ofMarkedSessions')} />
           {o.hallTickets[0] ? (
-            <Stat label={`${o.hallTickets[0].exam} hall tickets`} value={`${o.hallTickets[0].released}/${o.hallTickets[0].students}`} hint={`released · ${o.hallTickets[0].cleared} fee cleared`} />
+            <Stat
+              label={t('principal.home.hallTicketsOf', { exam: o.hallTickets[0].exam })}
+              value={`${o.hallTickets[0].released}/${o.hallTickets[0].students}`}
+              hint={t('principal.home.releasedCleared', { count: o.hallTickets[0].cleared })}
+            />
           ) : (
-            <Stat label="Hall tickets" value="—" hint="no upcoming exam" />
+            <Stat label={t('principal.home.hallTickets')} value="—" hint={t('principal.home.noUpcomingExam')} />
           )}
         </div>
       </Section>
 
-      <Section title="Academic overview">
+      <Section title={t('principal.home.academicOverview')}>
         {o.academics.length === 0 ? (
-          <EmptyState title="No assessments in progress" />
+          <EmptyState title={t('principal.home.noAssessments')} />
         ) : (
           <>
           {/* Phone: one card per class instead of a table that scrolls sideways. */}
@@ -87,20 +97,20 @@ export const PrincipalHome: React.FC = () => {
                       <span className="block font-semibold">{a.classLabel} · {a.assessment}</span>
                       <span className="block text-xs text-slate-500">{a.classTeacher}</span>
                     </span>
-                    <span className="text-sm font-semibold text-blue-800">{a.subjectsAccepted}/{a.subjectsTotal} subjects</span>
+                    <span className="text-sm font-semibold text-blue-800">{t('principal.home.subjectsOf', { a: a.subjectsAccepted, b: a.subjectsTotal })}</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
                     <div className="h-full bg-blue-600" style={{ width: `${pct(a.subjectsAccepted, a.subjectsTotal)}%` }} />
                   </div>
                   <div className="text-xs">
                     {a.published ? (
-                      <Pill tone="success">Published</Pill>
+                      <Pill tone="success">{t('principal.home.published')}</Pill>
                     ) : Object.keys(a.cards).length === 0 ? (
-                      <span className="text-slate-400">Report cards not generated</span>
+                      <span className="text-slate-400">{t('principal.home.cardsNotGenerated')}</span>
                     ) : (
                       <span className="flex flex-wrap gap-1">
                         {Object.entries(a.cards).map(([k, n]) => (
-                          <Pill key={k} tone={k === 'APPROVED' ? 'success' : k === 'RETURNED' ? 'danger' : k === 'SUBMITTED' ? 'info' : 'neutral'}>{n} {k.toLowerCase()}</Pill>
+                          <Pill key={k} tone={cardTone(k)}>{cardLabel(k, n)}</Pill>
                         ))}
                       </span>
                     )}
@@ -113,10 +123,10 @@ export const PrincipalHome: React.FC = () => {
             <table className="w-full text-sm min-w-[560px]">
               <thead className="text-left text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th className="p-3 font-medium">Class</th>
-                  <th className="p-3 font-medium">Assessment</th>
-                  <th className="p-3 font-medium">Subjects accepted</th>
-                  <th className="p-3 font-medium">Report cards</th>
+                  <th className="p-3 font-medium">{t('principal.home.colClass')}</th>
+                  <th className="p-3 font-medium">{t('principal.home.colAssessment')}</th>
+                  <th className="p-3 font-medium">{t('principal.home.colSubjectsAccepted')}</th>
+                  <th className="p-3 font-medium">{t('principal.home.colReportCards')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -130,13 +140,13 @@ export const PrincipalHome: React.FC = () => {
                     <td className="p-3">{a.subjectsAccepted}/{a.subjectsTotal}</td>
                     <td className="p-3">
                       {a.published ? (
-                        <Pill tone="success">Published</Pill>
+                        <Pill tone="success">{t('principal.home.published')}</Pill>
                       ) : Object.keys(a.cards).length === 0 ? (
-                        <span className="text-slate-400">Not generated</span>
+                        <span className="text-slate-400">{t('principal.home.notGenerated')}</span>
                       ) : (
                         <span className="flex flex-wrap gap-1">
                           {Object.entries(a.cards).map(([k, n]) => (
-                            <Pill key={k} tone={k === 'APPROVED' ? 'success' : k === 'RETURNED' ? 'danger' : k === 'SUBMITTED' ? 'info' : 'neutral'}>{n} {k.toLowerCase()}</Pill>
+                            <Pill key={k} tone={cardTone(k)}>{cardLabel(k, n)}</Pill>
                           ))}
                         </span>
                       )}
@@ -150,12 +160,16 @@ export const PrincipalHome: React.FC = () => {
         )}
       </Section>
 
-      <Section title="Financial overview">
+      <Section title={t('principal.home.financialOverview')}>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-          <Stat label="Collected" value={formatINR(o.finance.collected)} hint={`${pct(o.finance.collected, o.finance.charged - o.finance.concession)}% of net dues`} />
-          <Stat label="Outstanding" value={formatINR(o.finance.outstanding)} />
-          <Stat label="Overdue" value={formatINR(o.finance.overdue)} />
-          <Stat label="Concessions" value={formatINR(o.finance.concession)} />
+          <Stat
+            label={t('principal.home.collected')}
+            value={formatINR(o.finance.collected)}
+            hint={t('principal.home.pctNet', { pct: pct(o.finance.collected, o.finance.charged - o.finance.concession) })}
+          />
+          <Stat label={t('principal.home.outstanding')} value={formatINR(o.finance.outstanding)} />
+          <Stat label={t('principal.home.overdue')} value={formatINR(o.finance.overdue)} />
+          <Stat label={t('principal.home.concessions')} value={formatINR(o.finance.concession)} />
         </div>
         <Panel className="p-3.5 space-y-2.5">
           {o.finance.byInstalment.map(i => (

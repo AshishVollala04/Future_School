@@ -34,7 +34,7 @@ export const AdminSubstitution: React.FC = () => {
   q.data.forEach(n => byLeave.set(n.leaveId, [...(byLeave.get(n.leaveId) ?? []), n]));
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5 max-w-3xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold">Substitution</h1>
         <p className="text-sm text-slate-600">Only leave the Principal approved appears here. The list offers teachers who are free in that period.</p>

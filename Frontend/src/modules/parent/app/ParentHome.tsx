@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertOctagon, BookOpenCheck, Bus, CalendarCheck, CalendarClock, CalendarPlus, ChevronRight, ClipboardCheck, Clock,
-  FileCheck2, IndianRupee, Megaphone, MessageSquare, NotebookPen, Ticket, Trophy
+  FileCheck2, IndianRupee, Megaphone, NotebookPen, ShieldCheck, Ticket, Trophy
 } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
@@ -47,7 +47,7 @@ const iconClass: Record<Tone, string> = {
 
 /** One swipeable quick card. `alert` shows the orange dot from the reference design. */
 const QuickCard: React.FC<{ to: string; icon: React.ReactNode; tint: string; title: string; status: string; alert?: boolean }> = ({ to, icon, tint, title, status, alert }) => (
-  <Link to={to} className="lift snap-start shrink-0 w-40 rounded-3xl bg-white shadow-card border border-slate-100 p-4 relative">
+  <Link to={to} className="lift snap-start shrink-0 w-40 md:w-auto rounded-3xl bg-white shadow-card border border-slate-100 p-4 relative">
     {alert && <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-orange-500" aria-hidden="true" />}
     <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${tint}`}>{icon}</span>
     <span className="block mt-3 text-sm font-bold text-slate-900">{title}</span>
@@ -166,73 +166,46 @@ export const ParentHome: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* 1. Quick cards: overlap the header wave a little, like the reference */}
-      <div className="-mt-6 -mx-4 px-4 flex gap-3 overflow-x-auto no-scrollbar snap-x pb-1 relative z-10">
+      <div className="-mt-6 -mx-4 px-4 flex gap-3 overflow-x-auto no-scrollbar snap-x pb-1 relative z-10 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:overflow-visible">
         <QuickCard to="/parent/academics?tab=homework" icon={<BookOpenCheck className="w-6 h-6" />} tint="bg-blue-50 text-blue-700"
           title={t('parent.ui.homework')} status={pendingHw ? t('parent.ui.homeworkPending', { count: pendingHw }) : t('parent.ui.homeworkDone')} alert={overdueHw.length > 0} />
         <QuickCard to="/parent/fees" icon={<IndianRupee className="w-6 h-6" />} tint="bg-indigo-50 text-indigo-700"
           title={t('parent.ui.feePayment')} status={feeStatus} alert={Boolean(f && f.overdueAmount > 0)} />
         <QuickCard to="/parent/academics?tab=exams" icon={<Ticket className="w-6 h-6" />} tint="bg-sky-50 text-sky-700"
           title={t('parent.ui.hallTicket')} status={ticketStatus} alert={Boolean(nextTicket && !nextTicket.available && nextTicket.feeClearance === 'PENDING')} />
-        <QuickCard to="/parent/leave" icon={<CalendarPlus className="w-6 h-6" />} tint="bg-emerald-50 text-emerald-700"
-          title={t('parent.ui.applyLeave')} status={t('parent.ui.applyLeaveHint')} />
+        <QuickCard to="/parent/attendance" icon={<CalendarCheck className="w-6 h-6" />} tint="bg-emerald-50 text-emerald-700"
+          title={t('parent.ui.attendance')} status={attendanceStatus} />
       </div>
 
-      {/* 2. Needs attention */}
-      {actions.length > 0 && (
-        <section>
-          <h2 className="text-lg font-extrabold tracking-tight mb-2.5">{t('parent.home.needsAttention')}</h2>
-          <ul className="space-y-2.5">
-            {(showAll ? actions : actions.slice(0, 3)).map(a => (
-              <li key={a.id}>
-                <Link to={a.to} className={`flex gap-3 p-3.5 rounded-2xl border ${toneClass[a.tone]} active:scale-[0.99] transition`}>
-                  <span className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${iconClass[a.tone]}`}>{a.icon}</span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-base font-semibold text-slate-900">{a.title}</span>
-                    <span className="block text-sm text-slate-600 line-clamp-2">{a.detail}</span>
-                  </span>
-                  <span className="self-center text-sm font-semibold text-blue-700 flex items-center shrink-0">
-                    {a.cta} <ChevronRight className="w-4 h-4" />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {actions.length > 3 && (
-            <button type="button" onClick={() => setShowAll(v => !v)} className="mt-2 w-full min-h-11 rounded-xl text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100">
-              {showAll ? t('parent.ui.showLess') : t('parent.ui.showMore', { count: actions.length - 3 })}
-            </button>
-          )}
-        </section>
-      )}
+      {/* 2. Notice board (red, right under the quick cards) */}
+      <Link to="/parent/notices" className="lift block rounded-3xl bg-gradient-to-br from-rose-600 via-red-600 to-red-700 text-white p-5 shadow-float ring-1 ring-red-700/30">
+        <span className="flex items-center justify-between">
+          <span className="font-bold flex items-center gap-2"><Megaphone className="w-4 h-4" />{t('parent.ui.noticeBoard')}</span>
+          <span className="text-sm text-red-100 flex items-center">{t('parent.ui.viewAll')} <ChevronRight className="w-4 h-4" /></span>
+        </span>
+        {latest ? (
+          <span className="block mt-2">
+            <span className="block text-sm font-semibold">{latest.title}</span>
+            <span className="block text-sm text-red-50 line-clamp-2 mt-0.5">{latest.body}</span>
+            <span className="block text-xs text-red-200 mt-1.5">{formatDate(latest.publishedAt.slice(0, 10), lang)}</span>
+          </span>
+        ) : (
+          <span className="block mt-2 text-sm text-red-100">{t('parent.ui.noticesNone')}</span>
+        )}
+      </Link>
 
       {/* 3. Tiles */}
-      <div className="grid grid-cols-2 gap-3">
-        <Tile to="/parent/notices" icon={<Megaphone className="w-5 h-5" />} tint="bg-blue-50 text-blue-700" title={t('parent.ui.notices')}
-          status={notices.data?.length ? t('parent.ui.noticesCount', { count: notices.data.length }) : t('parent.ui.noticesNone')} />
-        <Tile to="/parent/attendance" icon={<CalendarCheck className="w-5 h-5" />} tint="bg-emerald-50 text-emerald-700" title={t('parent.ui.attendance')} status={attendanceStatus} />
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <Tile to="/parent/meetings" icon={<CalendarClock className="w-5 h-5" />} tint="bg-blue-50 text-blue-700" title={t('parent.more.meetings')}
+          status={t('parent.ui.meetingsHint')} />
+        <Tile to="/parent/pickup" icon={<ShieldCheck className="w-5 h-5" />} tint="bg-violet-50 text-violet-700" title={t('parent.more.pickup')} status={t('parent.ui.pickupHint')} />
         <Tile to="/parent/academics?tab=exams" icon={<Trophy className="w-5 h-5" />} tint="bg-amber-50 text-amber-700" title={t('parent.ui.results')} status={resultsStatus} />
-        <Tile to="/parent/messages" icon={<MessageSquare className="w-5 h-5" />} tint="bg-indigo-50 text-indigo-700" title={t('parent.ui.messages')} status={t('parent.ui.messagesHint')} />
+        <Tile to="/parent/leave" icon={<CalendarPlus className="w-5 h-5" />} tint="bg-emerald-50 text-emerald-700" title={t('parent.ui.applyLeave')} status={t('parent.ui.applyLeaveHint')} />
         <Tile to="/parent/academics?tab=timetable" icon={<Clock className="w-5 h-5" />} tint="bg-sky-50 text-sky-700" title={t('parent.ui.timetable')}
           status={todaySlots.length ? t('parent.ui.periodsToday', { count: todaySlots.length }) : t('parent.ui.noPeriodsToday')} />
         <Tile to="/parent/transport" icon={<Bus className="w-5 h-5" />} tint="bg-orange-50 text-orange-700" title={t('parent.ui.transport')} status={t('parent.ui.transportHint')} />
       </div>
 
-      {/* 4. Notice board */}
-      <Link to="/parent/notices" className="lift block rounded-3xl bg-gradient-to-br from-slate-950 via-blue-950 to-blue-800 text-white p-5 shadow-float">
-        <span className="flex items-center justify-between">
-          <span className="font-bold">{t('parent.ui.noticeBoard')}</span>
-          <span className="text-sm text-blue-200 flex items-center">{t('parent.ui.viewAll')} <ChevronRight className="w-4 h-4" /></span>
-        </span>
-        {latest ? (
-          <span className="block mt-2">
-            <span className="block text-sm font-semibold">{latest.title}</span>
-            <span className="block text-sm text-blue-100 line-clamp-2 mt-0.5">{latest.body}</span>
-            <span className="block text-xs text-blue-300 mt-1.5">{formatDate(latest.publishedAt.slice(0, 10), lang)}</span>
-          </span>
-        ) : (
-          <span className="block mt-2 text-sm text-blue-100">{t('parent.ui.noticesNone')}</span>
-        )}
-      </Link>
     </div>
   );
 };

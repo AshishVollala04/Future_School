@@ -64,7 +64,7 @@ export const TeacherCorrections: React.FC = () => {
   if (a.status === 'loading') return <LoadingBlock />;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold">Corrections to published results</h1>
         <p className="text-sm text-slate-600">Published marks are never overwritten. A correction creates a new version; the old one is kept as superseded.</p>

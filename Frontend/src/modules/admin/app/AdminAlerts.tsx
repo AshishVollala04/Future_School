@@ -80,7 +80,7 @@ export const AdminAlerts: React.FC = () => {
   const t = o.today;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold flex items-center gap-2"><MessageCircle className="w-5 h-5 text-emerald-600" /> WhatsApp alerts</h1>
         <p className="text-sm text-slate-600">Parents hear about an absence the same morning, and about overdue fees when the office sends a reminder.</p>

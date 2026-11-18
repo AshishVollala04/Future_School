@@ -33,7 +33,7 @@ export const AdminComplaints: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4 max-w-3xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold">Complaints</h1>
         <p className="text-sm text-slate-600">Parents see every reply. Safety complaints are shown to the Principal automatically.</p>

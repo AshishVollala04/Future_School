@@ -87,7 +87,7 @@ export const TeacherClassResults: React.FC = () => {
     );
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl xl:max-w-6xl">
       <div>
         <p className="text-sm font-semibold text-blue-800">My Class Teacher responsibility</p>
         <h1 className="text-xl font-bold">{assessment.name} results · Class {ct.grade}-{ct.section}</h1>
@@ -211,7 +211,7 @@ const ReviewSheet: React.FC<{ sheetId: string; onBack: () => void }> = ({ sheetI
     onBack();
   };
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4 max-w-3xl xl:max-w-6xl">
       <button onClick={onBack} className="min-h-11 flex items-center gap-1 text-sm font-semibold text-blue-800">
         <ChevronLeft className="w-4 h-4" /> Back to class results
       </button>

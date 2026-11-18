@@ -4,6 +4,7 @@
  * The Principal does not release routinely; that is the Class Teacher's job.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
 import { useScope } from '../../hooks/useScope';
 import { useQuery } from '../../hooks/useQuery';
@@ -16,6 +17,7 @@ import { ErrorBox, PrimaryButton, LinkButton, inputClass } from '../auth/authUi'
 import { HallTicketStatus } from '../../types/domain';
 
 export const PrincipalHallTickets: React.FC = () => {
+  const { t } = useTranslation();
   const scope = useScope();
   const { promptSensitiveActionAuth } = useAuth();
   const classes = useQuery(() => academicsService.listClasses(scope), [scope.schoolId]);
@@ -33,11 +35,11 @@ export const PrincipalHallTickets: React.FC = () => {
   const submit = () => {
     if (!target) return;
     setError(null);
-    if (reason.trim().length < 10) return setError('Give a reason of at least 10 characters. It is recorded in the audit log.');
-    promptSensitiveActionAuth(`Emergency hall ticket override for ${target.student.name}`, async token => {
+    if (reason.trim().length < 10) return setError(t('principal.hall.reasonShort'));
+    promptSensitiveActionAuth(t('principal.hall.sensitive', { name: target.student.name }), async token => {
       const r = await hallTicketService.principalOverride(scope, target.exam.id, target.student.id, reason, token);
       if (!r.ok) return setError(r.error);
-      setDone(`Override recorded for ${target.student.name}.`);
+      setDone(t('principal.hall.done', { name: target.student.name }));
       setTarget(null);
       setReason('');
       list.reload();
@@ -46,16 +48,16 @@ export const PrincipalHallTickets: React.FC = () => {
 
   const rows = list.data ?? [];
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-4 max-w-4xl xl:max-w-6xl">
       <div>
-        <h1 className="text-xl font-bold">Hall ticket status</h1>
-        <p className="text-sm text-slate-600">Class Teachers release hall tickets after fee clearance. Use the override only in exceptional cases.</p>
+        <h1 className="text-xl font-bold">{t('principal.hall.title')}</h1>
+        <p className="text-sm text-slate-600">{t('principal.hall.subtitle')}</p>
       </div>
       <label className="block max-w-xs">
-        <span className="block text-sm font-semibold text-slate-700 mb-1.5">Class</span>
+        <span className="block text-sm font-semibold text-slate-700 mb-1.5">{t('principal.hall.classLabel')}</span>
         <select value={classId} onChange={e => setPicked(e.target.value)} className={inputClass} disabled={classes.status !== 'ready'}>
           {(classes.data ?? []).map(c => (
-            <option key={c.id} value={c.id}>Class {c.grade}-{c.section} · {c.classTeacherName}</option>
+            <option key={c.id} value={c.id}>{t('principal.hall.classOption', { grade: c.grade, section: c.section, teacher: c.classTeacherName })}</option>
           ))}
         </select>
       </label>
@@ -69,9 +71,9 @@ export const PrincipalHallTickets: React.FC = () => {
           <table className="w-full text-sm min-w-[560px]">
             <thead className="text-left text-slate-500 border-b border-slate-200">
               <tr>
-                <th className="p-3 font-medium">Student</th>
-                <th className="p-3 font-medium">Fee clearance</th>
-                <th className="p-3 font-medium">Release</th>
+                <th className="p-3 font-medium">{t('principal.hall.colStudent')}</th>
+                <th className="p-3 font-medium">{t('principal.hall.colFee')}</th>
+                <th className="p-3 font-medium">{t('principal.hall.colRelease')}</th>
                 <th className="p-3" />
               </tr>
             </thead>
@@ -80,13 +82,13 @@ export const PrincipalHallTickets: React.FC = () => {
                 <tr key={h.student.id}>
                   <td className="p-3 font-medium">{h.student.rollNumber}. {h.student.name}</td>
                   <td className="p-3">
-                    <Pill tone={h.feeClearance === 'CLEARED' ? 'success' : 'warning'}>{h.feeClearance === 'CLEARED' ? 'Cleared' : 'Pending'}</Pill>
+                    <Pill tone={h.feeClearance === 'CLEARED' ? 'success' : 'warning'}>{h.feeClearance === 'CLEARED' ? t('principal.hall.cleared') : t('principal.hall.pending')}</Pill>
                   </td>
-                  <td className="p-3">{h.release ? (h.release.principalOverride ? 'Override' : 'Class Teacher') : '—'}</td>
+                  <td className="p-3">{h.release ? (h.release.principalOverride ? t('principal.hall.override') : t('principal.hall.classTeacher')) : '—'}</td>
                   <td className="p-3 text-right">
                     {!h.release && h.feeClearance === 'CLEARED' && (
                       <button onClick={() => { setTarget(h); setError(null); setDone(null); }} className="min-h-10 px-3 rounded-lg border border-orange-300 text-orange-800 text-sm font-semibold hover:bg-orange-50">
-                        Emergency override
+                        {t('principal.hall.emergency')}
                       </button>
                     )}
                   </td>
@@ -97,22 +99,20 @@ export const PrincipalHallTickets: React.FC = () => {
         </Panel>
       )}
 
-      <Modal isOpen={Boolean(target)} onClose={() => setTarget(null)} title="Emergency override">
+      <Modal isOpen={Boolean(target)} onClose={() => setTarget(null)} title={t('principal.hall.emergency')}>
         {target && (
           <div className="space-y-3">
             <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 text-sm text-orange-900 flex gap-2">
               <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>
-                {target.student.name} ({target.exam.name}). Fees are cleared but the Class Teacher has not released the ticket. This is recorded in the audit log with your reason.
-              </span>
+              <span>{t('principal.hall.modalDesc', { name: target.student.name, exam: target.exam.name })}</span>
             </div>
             <label className="block">
-              <span className="block text-sm font-semibold text-slate-700 mb-1.5">Reason (required)</span>
+              <span className="block text-sm font-semibold text-slate-700 mb-1.5">{t('principal.hall.reasonLabel')}</span>
               <textarea value={reason} onChange={e => setReason(e.target.value.slice(0, 500))} rows={3} className={inputClass} />
             </label>
             <ErrorBox message={error} />
-            <PrimaryButton onClick={submit}>Confirm with OTP</PrimaryButton>
-            <LinkButton onClick={() => setTarget(null)}>Cancel</LinkButton>
+            <PrimaryButton onClick={submit}>{t('principal.hall.confirmOtp')}</PrimaryButton>
+            <LinkButton onClick={() => setTarget(null)}>{t('principal.act.cancel')}</LinkButton>
           </div>
         )}
       </Modal>

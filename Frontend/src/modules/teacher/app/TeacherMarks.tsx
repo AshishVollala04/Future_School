@@ -39,7 +39,7 @@ const SheetList: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
   if (q.status === 'loading') return <LoadingBlock />;
   if (q.status === 'error') return <ErrorState message={q.error} onRetry={q.reload} />;
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4 max-w-3xl xl:max-w-6xl">
       <div>
         <p className="text-sm font-semibold text-blue-800">My Teaching</p>
         <h1 className="text-xl font-bold">Marks entry</h1>
@@ -187,7 +187,7 @@ const SheetEditor: React.FC<{ sheetId: string; onBack: () => void }> = ({ sheetI
 
   const filled = view.students.filter(s => (values[s.id]?.internal ?? '') !== '').length;
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="space-y-4 max-w-3xl xl:max-w-6xl">
       <button onClick={onBack} className="min-h-11 flex items-center gap-1 text-sm font-semibold text-blue-800">
         <ChevronLeft className="w-4 h-4" /> My sheets
       </button>

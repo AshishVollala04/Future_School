@@ -55,7 +55,7 @@ export const ParentPickupPage: React.FC = () => {
   return (
     <div className="space-y-5">
       <h1 className="text-lg font-bold">{t('parent.more.pickup')}</h1>
-      <Section title="Can collect your child">
+      <Section title="Can Pickup your child">
         <Panel className="divide-y divide-slate-100">
           {guardians.map(g => (
             <div key={g.name} className="p-3 flex items-center justify-between gap-2">
@@ -81,7 +81,7 @@ export const ParentPickupPage: React.FC = () => {
 
       <form onSubmit={issue}>
         <Panel className="p-4 space-y-3">
-          <p className="font-semibold">Someone else is collecting today</p>
+          <p className="font-semibold">Authorise someone to pick up your child ?</p>
           <div className="grid sm:grid-cols-2 gap-2">
             <label className="block"><span className="block text-sm font-semibold mb-1">Full name</span><input value={form.personName} onChange={set('personName')} className={inputClass} /></label>
             <label className="block"><span className="block text-sm font-semibold mb-1">Relation</span><input value={form.relation} onChange={set('relation')} placeholder="e.g. Uncle" className={inputClass} /></label>

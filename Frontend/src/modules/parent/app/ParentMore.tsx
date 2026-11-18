@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Bell, Bus, MessageCircle, CalendarClock, CalendarPlus, ChevronRight, ClipboardCheck, LogOut, MessageSquareWarning, ShieldCheck } from 'lucide-react';
+import { MessageCircle, ChevronRight, ClipboardCheck, LogOut, MessageSquareWarning } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
@@ -11,19 +11,16 @@ import { alertService } from '../../../services/alertService';
 import { EmptyState, ErrorState, LoadingBlock, Panel, Pill } from '../../../components/common/States';
 import { ErrorBox } from '../../auth/authUi';
 import { formatDate, formatDateTime } from '../../../utils/date';
+import { ConfirmDialog } from '../../../components/ui/Modal';
 
 export const ParentMore: React.FC = () => {
   const { t } = useTranslation();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const items = [
-    { to: '/parent/leave', key: 'leave', icon: CalendarPlus },
     { to: '/parent/consent', key: 'consent', icon: ClipboardCheck },
-    { to: '/parent/meetings', key: 'meetings', icon: CalendarClock },
-    { to: '/parent/pickup', key: 'pickup', icon: ShieldCheck },
-    { to: '/parent/transport', key: 'transport', icon: Bus },
-    { to: '/parent/complaints', key: 'complaints', icon: MessageSquareWarning },
-    { to: '/parent/notices', key: 'notices', icon: Bell }
+    { to: '/parent/complaints', key: 'complaints', icon: MessageSquareWarning }
   ];
   return (
     <div className="space-y-4">
@@ -39,14 +36,23 @@ export const ParentMore: React.FC = () => {
       {alertService.available && <WhatsAppSwitch />}
       <button
         type="button"
-        onClick={() => {
-          logout();
-          navigate('/login', { replace: true });
-        }}
+        onClick={() => setConfirmLogout(true)}
         className="w-full min-h-12 rounded-xl border border-rose-200 bg-white text-rose-700 font-semibold flex items-center justify-center gap-2"
       >
         <LogOut className="w-4 h-4" /> {t('nav.logout')}
       </button>
+      <ConfirmDialog
+        isOpen={confirmLogout}
+        onClose={() => setConfirmLogout(false)}
+        onConfirm={() => {
+          logout();
+          navigate('/login', { replace: true });
+        }}
+        title="Log out?"
+        description="You will need to sign in again to see your child's details."
+        confirmLabel="Log out"
+        variant="danger"
+      />
     </div>
   );
 };

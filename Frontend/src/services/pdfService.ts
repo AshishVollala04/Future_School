@@ -341,9 +341,18 @@ export const PdfService = {
     .right { text-align: right; font-variant-numeric: tabular-nums; }
     .total { background: #eff6ff; font-weight: 800; font-size: 14px; }
     .foot { display: flex; justify-content: space-between; margin-top: 28px; font-size: 11px; color: #64748b; }
+    .toolbar { max-width: 720px; margin: 0 auto 12px; display: flex; gap: 8px; }
+    .toolbar button { min-height: 40px; padding: 0 14px; border-radius: 10px; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
+    .toolbar .back { border: 1px solid #cbd5e1; background: #fff; color: #0f172a; }
+    .toolbar .print { border: 0; background: #1d4ed8; color: #fff; }
+    @media print { .toolbar { display: none; } }
   </style>
 </head>
 <body>
+  <div class="toolbar">
+    <button type="button" class="back" onclick="if (window.opener) { window.close(); } else { history.back(); }">&larr; Back</button>
+    <button type="button" class="print" onclick="window.print()">Print / Save PDF</button>
+  </div>
   <div class="box">
     <div class="header">
       <div class="school">${esc(data.schoolName || 'FutureSchool')}</div>

@@ -82,7 +82,7 @@ export const TeacherToday: React.FC = () => {
     );
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl xl:max-w-6xl">
       <h1 className="text-xl font-bold">Today</h1>
       <Section title="My periods">
         {myPeriods.length === 0 ? (

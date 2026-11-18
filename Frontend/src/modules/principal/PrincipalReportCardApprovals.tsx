@@ -3,13 +3,16 @@
  * The Principal never publishes; the Class Teacher publishes once all are approved.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useScope } from '../../hooks/useScope';
 import { useQuery } from '../../hooks/useQuery';
 import { marksService } from '../../services/marksService';
+import { notifyStaffDataChanged } from '../../app/staffEvents';
 import { EmptyState, ErrorState, LoadingBlock, Panel, Pill, Section } from '../../components/common/States';
 import { ErrorBox, inputClass } from '../auth/authUi';
 
 export const PrincipalReportCardApprovals: React.FC = () => {
+  const { t } = useTranslation();
   const scope = useScope();
   const q = useQuery(() => marksService.listForPrincipal(scope), [scope.schoolId]);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -23,6 +26,7 @@ export const PrincipalReportCardApprovals: React.FC = () => {
     setBusy(null);
     if (!r.ok) setError(r.error);
     q.reload();
+    notifyStaffDataChanged();
   };
 
   const approveAll = async (ids: string[]) => {
@@ -37,31 +41,40 @@ export const PrincipalReportCardApprovals: React.FC = () => {
     }
     setBusy(null);
     q.reload();
+    notifyStaffDataChanged();
   };
 
   if (q.status === 'loading') return <LoadingBlock />;
   if (q.status === 'error') return <ErrorState message={q.error} onRetry={q.reload} />;
 
+  const statusLabel = (s: string) =>
+    s === 'SUBMITTED' ? t('principal.cards.waiting') : s === 'APPROVED' ? t('principal.cards.approved') : s === 'RETURNED' ? t('principal.cards.returned') : t('principal.cards.published');
+
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl xl:max-w-6xl">
       <div>
-        <h1 className="text-xl font-bold">Report card approvals</h1>
-        <p className="text-sm text-slate-600">Approve or return each card. Class Teachers publish after every card in the class is approved.</p>
+        <h1 className="text-xl font-bold">{t('principal.cards.title')}</h1>
+        <p className="text-sm text-slate-600">{t('principal.cards.subtitle')}</p>
       </div>
       <ErrorBox message={error} />
       {q.data.length === 0 ? (
-        <EmptyState title="No report cards waiting" />
+        <EmptyState title={t('principal.cards.none')} />
       ) : (
         q.data.map(g => {
           const pending = g.cards.filter(c => c.status === 'SUBMITTED');
           return (
             <Section
               key={g.classSection.id + g.assessment.id}
-              title={`${g.assessment.name} · Class ${g.classSection.grade}-${g.classSection.section} · ${g.classSection.classTeacherName}`}
+              title={t('principal.cards.groupTitle', {
+                assessment: g.assessment.name,
+                grade: g.classSection.grade,
+                section: g.classSection.section,
+                teacher: g.classSection.classTeacherName
+              })}
               action={
                 pending.length > 0 ? (
                   <button onClick={() => approveAll(pending.map(c => c.id))} disabled={busy === 'all'} className="min-h-10 px-3 rounded-lg bg-blue-700 text-white text-sm font-semibold disabled:opacity-50">
-                    Approve all {pending.length}
+                    {t('principal.cards.approveAll', { count: pending.length })}
                   </button>
                 ) : undefined
               }
@@ -72,7 +85,7 @@ export const PrincipalReportCardApprovals: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span className="flex-1 font-semibold">{c.rollNumber}. {c.studentName}</span>
                       <Pill tone={c.status === 'APPROVED' || c.status === 'PUBLISHED' ? 'success' : c.status === 'RETURNED' ? 'danger' : 'info'}>
-                        {c.status === 'SUBMITTED' ? 'Waiting' : c.status === 'APPROVED' ? 'Approved' : c.status === 'RETURNED' ? 'Returned' : 'Published'}
+                        {statusLabel(c.status)}
                       </Pill>
                     </div>
                     <div className="overflow-x-auto">
@@ -83,12 +96,12 @@ export const PrincipalReportCardApprovals: React.FC = () => {
                     <p className="text-sm">“{c.classTeacherRemark}”</p>
                     {c.status === 'SUBMITTED' && (
                       <div className="flex flex-col sm:flex-row gap-2">
-                        <input value={notes[c.id] ?? ''} onChange={e => setNotes(n => ({ ...n, [c.id]: e.target.value.slice(0, 200) }))} placeholder="Note (required to return)" className={`${inputClass} py-2 flex-1`} />
-                        <button onClick={() => decide(c.id, 'RETURN')} disabled={busy === c.id} className="min-h-11 px-4 rounded-xl border border-rose-300 text-rose-800 font-semibold">Return</button>
-                        <button onClick={() => decide(c.id, 'APPROVE')} disabled={busy === c.id} className="min-h-11 px-4 rounded-xl bg-blue-700 text-white font-semibold">Approve</button>
+                        <input value={notes[c.id] ?? ''} onChange={e => setNotes(n => ({ ...n, [c.id]: e.target.value.slice(0, 200) }))} placeholder={t('principal.act.noteReturn')} className={`${inputClass} py-2 flex-1`} />
+                        <button onClick={() => decide(c.id, 'RETURN')} disabled={busy === c.id} className="min-h-11 px-4 rounded-xl border border-rose-300 text-rose-800 font-semibold">{t('principal.act.return')}</button>
+                        <button onClick={() => decide(c.id, 'APPROVE')} disabled={busy === c.id} className="min-h-11 px-4 rounded-xl bg-blue-700 text-white font-semibold">{t('principal.act.approve')}</button>
                       </div>
                     )}
-                    {c.status === 'RETURNED' && c.principalNote && <p className="text-xs text-rose-800">Your note: {c.principalNote}</p>}
+                    {c.status === 'RETURNED' && c.principalNote && <p className="text-xs text-rose-800">{t('principal.cards.yourNote', { note: c.principalNote })}</p>}
                   </div>
                 ))}
               </Panel>

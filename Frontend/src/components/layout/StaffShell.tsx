@@ -5,6 +5,7 @@
  */
 import React, { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, LogOut, Menu, X } from 'lucide-react';
 import { isHome, useGoBack } from '../../app/backNavigation';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +13,7 @@ import { useTenant } from '../../context/TenantContext';
 import { LanguageToggle } from '../common/LanguageToggle';
 import { SensitiveActionModal } from '../common/SensitiveActionModal';
 import { ErrorState, LoadingBlock } from '../common/States';
+import { ConfirmDialog } from '../ui/Modal';
 
 export interface StaffNavItem {
   to: string;
@@ -25,10 +27,12 @@ export interface StaffNavGroup {
 }
 
 export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavItem[]; roleLabel: string }> = ({ groups, bottom, roleLabel }) => {
+  const { t } = useTranslation();
   const { session, currentUser, logout } = useAuth();
   const { state: tenant, school, boardProfile } = useTenant();
   const navigate = useNavigate();
   const [drawer, setDrawer] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const location = useLocation();
   const goBack = useGoBack();
 
@@ -69,11 +73,11 @@ export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavIte
       {/* Same blue brand as the parent app and sign-in page. */}
       <header className="sticky top-0 z-30 hero-glow text-white shadow-md shadow-blue-900/10 pt-[env(safe-area-inset-top)]">
         <div className="min-h-16 py-2 px-3 sm:px-5 flex items-center gap-3">
-          <button className="lg:hidden w-11 h-11 -ml-1 flex items-center justify-center rounded-xl hover:bg-white/15" onClick={() => setDrawer(true)} aria-label="Open menu">
+          <button className="lg:hidden w-11 h-11 -ml-1 flex items-center justify-center rounded-xl hover:bg-white/15" onClick={() => setDrawer(true)} aria-label={t('staff.openMenu')}>
             <Menu className="w-5 h-5" />
           </button>
           {!isHome(location.pathname) && (
-            <button className="w-11 h-11 -ml-1 flex items-center justify-center rounded-xl hover:bg-white/15" onClick={goBack} aria-label="Back">
+            <button className="w-11 h-11 -ml-1 flex items-center justify-center rounded-xl hover:bg-white/15" onClick={goBack} aria-label={t('staff.back')}>
               <ChevronLeft className="w-6 h-6" />
             </button>
           )}
@@ -86,8 +90,8 @@ export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavIte
             </p>
           </div>
           <LanguageToggle onDark />
-          <button onClick={signOut} className="hidden sm:flex min-h-10 px-3 rounded-full items-center gap-1.5 text-sm font-semibold text-white/90 hover:bg-white/15" aria-label="Sign out">
-            <LogOut className="w-4 h-4" /> Sign out
+          <button onClick={() => setConfirmSignOut(true)} className="hidden sm:flex min-h-10 px-3 rounded-full items-center gap-1.5 text-sm font-semibold text-white/90 hover:bg-white/15" aria-label={t('staff.signOut')}>
+            <LogOut className="w-4 h-4" /> {t('staff.signOut')}
           </button>
         </div>
       </header>
@@ -109,27 +113,41 @@ export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavIte
           </NavLink>
         ))}
         <button onClick={() => setDrawer(true)} className="min-h-16 flex flex-col items-center justify-center gap-1 text-xs font-semibold text-slate-500">
-          <Menu className="w-5 h-5" /> More
+          <Menu className="w-5 h-5" /> {t('staff.more')}
         </button>
       </nav>
 
-      {drawer && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-slate-950/50" onClick={() => setDrawer(false)} />
-          <div className="absolute inset-y-0 left-0 w-80 max-w-[85vw] bg-white p-3 overflow-y-auto flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <span className="px-2 text-sm font-bold text-blue-800">Menu</span>
-              <button className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-slate-100" onClick={() => setDrawer(false)} aria-label="Close menu">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex-1">{nav(() => setDrawer(false))}</div>
-            <button onClick={signOut} className="mt-4 min-h-12 rounded-xl border border-rose-200 text-rose-700 font-semibold flex items-center justify-center gap-2">
-              <LogOut className="w-4 h-4" /> Sign out
+      {/* Mobile menu: always mounted so it can slide in and out; `inert` keeps it unreachable while closed. */}
+      <div className={`fixed inset-0 z-50 lg:hidden ${drawer ? '' : 'pointer-events-none'}`} inert={!drawer} aria-hidden={!drawer}>
+        <div
+          className={`absolute inset-0 bg-slate-950/50 transition-opacity duration-300 ease-out ${drawer ? 'opacity-100' : 'opacity-0'}`}
+          onClick={() => setDrawer(false)}
+        />
+        <div
+          className={`absolute inset-y-0 left-0 w-80 max-w-[85vw] bg-white p-3 overflow-y-auto flex flex-col shadow-2xl transition-transform duration-300 ease-out ${drawer ? 'translate-x-0' : '-translate-x-full'}`}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="px-2 text-sm font-bold text-blue-800">{t('staff.menu')}</span>
+            <button className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-slate-100" onClick={() => setDrawer(false)} aria-label={t('staff.closeMenu')}>
+              <X className="w-5 h-5" />
             </button>
           </div>
+          <div className="flex-1">{nav(() => setDrawer(false))}</div>
+          <button onClick={() => setConfirmSignOut(true)} className="mt-4 min-h-12 rounded-xl border border-rose-200 text-rose-700 font-semibold flex items-center justify-center gap-2">
+            <LogOut className="w-4 h-4" /> {t('staff.signOut')}
+          </button>
         </div>
-      )}
+      </div>
+      <ConfirmDialog
+        isOpen={confirmSignOut}
+        onClose={() => setConfirmSignOut(false)}
+        onConfirm={signOut}
+        title={t('staff.signOutTitle')}
+        description={t('staff.signOutDesc')}
+        confirmLabel={t('staff.signOut')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+      />
       <SensitiveActionModal />
     </div>
   );

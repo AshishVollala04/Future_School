@@ -122,7 +122,7 @@ export const AdminStaffAccess: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold">Staff access</h1>
         <p className="text-sm text-slate-600">Principal and Admin sign in with the school's own email. Accounts are suspended, never deleted.</p>
@@ -206,7 +206,7 @@ export const AdminAudit: React.FC = () => {
   const f = filter.trim().toLowerCase();
   const rows = q.data.filter(e => !f || `${e.action} ${e.details} ${e.actorRole} ${e.targetId}`.toLowerCase().includes(f));
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-4 max-w-4xl xl:max-w-6xl">
       <div>
         <h1 className="text-xl font-bold">Audit log</h1>
         <p className="text-sm text-slate-600">Append-only. Nobody can edit or delete entries.</p>
