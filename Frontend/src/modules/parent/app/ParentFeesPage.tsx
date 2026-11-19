@@ -1,194 +1,53 @@
 /**
- * Parent Fees: four instalments, pay one/several terms or a part amount, receipts and history.
+ * Parent Fees: the child's recorded dues per instalment (with the academic year), paid amounts,
+ * concessions, due dates, overdue balance and the official receipts the school issued.
  *
- * Payment is SIMULATED (prototype / mock). The flow mirrors production:
- *   backend creates order (amount + allocation decided server-side)
- *   -> OTP re-check -> hosted checkout (simulated) -> verified webhook (simulated) -> receipt.
- * No card number, CVV, UPI PIN, OTP or bank password is ever collected or stored.
+ * There is no payment in the app: fees are paid at the school fee counter and recorded by the
+ * school's finance staff, who issue the receipt. Parents can view and print those receipts.
+ * Paying fees does not release a hall ticket by itself: the Class Teacher releases it after clearance.
  */
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, ChevronLeft, Download, Receipt, ShieldCheck, Lock, AlertCircle, Building2 } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Download, Receipt, Lock, Building2 } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
-import { useAuth } from '../../../context/AuthContext';
-import { feeService, PARTIAL_PAYMENT_MINIMUM } from '../../../services/feeService';
+import { feeService } from '../../../services/feeService';
 import { PdfService } from '../../../services/pdfService';
 import { EmptyState, ErrorState, LoadingBlock, MockLabel, Panel, Pill, Section } from '../../../components/common/States';
 import { Modal } from '../../../components/ui/Modal';
-import { ErrorBox, PrimaryButton, LinkButton, inputClass } from '../../auth/authUi';
 import { formatDate, formatDateTime, formatINR } from '../../../utils/date';
-import { USE_BACKEND } from '../../../app/backendConfig';
-import { Payment, PaymentOrder } from '../../../types/domain';
+import { Payment } from '../../../types/domain';
 import { useTenant } from '../../../context/TenantContext';
 
 const formatTermTitle = (n: number, label: string) =>
   /^term\s+\d+$/i.test(label.trim()) ? label.trim() : `Term ${n}`;
 
-interface RazorpayResponse {
-  razorpay_order_id: string;
-  razorpay_payment_id: string;
-  razorpay_signature: string;
-}
-
-interface RazorpayConstructor {
-  new (opts: Record<string, unknown>): { open(): void };
-}
-
-function loadRazorpayCheckout(): Promise<RazorpayConstructor> {
-  const w = window as unknown as { Razorpay?: RazorpayConstructor };
-  if (w.Razorpay) return Promise.resolve(w.Razorpay);
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    s.async = true;
-    s.onload = () => (w.Razorpay ? resolve(w.Razorpay) : reject(new Error('Razorpay unavailable')));
-    s.onerror = () => reject(new Error('Could not load Razorpay checkout'));
-    document.body.appendChild(s);
-  });
-}
-
-const METHODS: Payment['method'][] = ['UPI', 'CARD', 'NETBANKING'];
-
 export const ParentFeesPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const scope = useScope();
   const { school } = useTenant();
-  const { promptSensitiveActionAuth } = useAuth();
   const key = [scope.schoolId, scope.studentId];
   const summary = useQuery(() => feeService.getSummary(scope), key);
   const history = useQuery(() => feeService.listPayments(scope), key);
-  const [tab, setTab] = useState<'dues' | 'history'>('dues');
-  const [selected, setSelected] = useState<number[]>([]);
-  const [mode, setMode] = useState<'TERMS' | 'PARTIAL'>('TERMS');
-  const [partial, setPartial] = useState('');
-  const [order, setOrder] = useState<PaymentOrder | null>(null);
-  const [method, setMethod] = useState<Payment['method']>('UPI');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<Payment | null>(null);
+  const [tab, setTab] = React.useState<'dues' | 'history'>('dues');
+  const [receipt, setReceipt] = React.useState<Payment | null>(null);
   const lang = i18n.language;
-
-  const payable = useMemo(() => (summary.data?.instalments ?? []).filter(i => i.outstanding > 0), [summary.data]);
-  const selectedTotal = payable.filter(i => selected.includes(i.number)).reduce((a, i) => a + i.outstanding, 0);
-
-  const toggle = (n: number) => {
-    // Terms are paid in order: selecting a later term selects earlier unpaid ones too.
-    const earlier = payable.filter(i => i.number <= n).map(i => i.number);
-    setSelected(prev => (prev.includes(n) ? prev.filter(x => x < n) : Array.from(new Set([...prev, ...earlier]))));
-  };
-
-  const openRazorpay = async (ord: PaymentOrder) => {
-    try {
-      const Razorpay = await loadRazorpayCheckout();
-      const rzp = new Razorpay({
-        key: ord.razorpayKeyId,
-        amount: ord.amountPaise ?? ord.amount * 100,
-        currency: ord.currency ?? 'INR',
-        name: school?.name ?? 'FutureSchool',
-        description: `School fee (${ord.orderId})`,
-        order_id: ord.razorpayOrderId,
-        prefill: {
-          name: ord.prefillName,
-          contact: ord.prefillContact,
-        },
-        theme: { color: '#1E40AF' },
-        handler: async (res: RazorpayResponse) => {
-          setBusy(true);
-          const v = await feeService.verifyPayment(scope, ord.orderId, {
-            razorpayOrderId: res.razorpay_order_id,
-            razorpayPaymentId: res.razorpay_payment_id,
-            razorpaySignature: res.razorpay_signature,
-            method: 'UPI',
-          });
-          setBusy(false);
-          if (!v.ok) {
-            setError(v.error);
-            return;
-          }
-          setSelected([]);
-          setPartial('');
-          setReceipt(v.data);
-          summary.reload();
-          history.reload();
-        },
-        modal: {
-          ondismiss: () => setBusy(false),
-        },
-      });
-      rzp.open();
-    } catch {
-      setBusy(false);
-      setError('Could not open Razorpay checkout. Please check your connection and try again.');
-    }
-  };
-
-  const handleOrder = (ord: PaymentOrder) => {
-    if (ord.provider === 'razorpay' && ord.razorpayOrderId && ord.razorpayKeyId) {
-      void openRazorpay(ord);
-      return;
-    }
-    setOrder(ord);
-  };
-
-  const startPayment = async () => {
-    setError(null);
-    const req = mode === 'TERMS' ? { instalments: selected } : { amount: Number(partial) };
-    setBusy(true);
-    const r = await feeService.createOrder(scope, req);
-    setBusy(false);
-    if (r.ok) {
-      handleOrder(r.data);
-      return;
-    }
-    if (r.code !== 'STEP_UP_REQUIRED') {
-      setError(r.error);
-      return;
-    }
-    const amt = mode === 'TERMS' ? selectedTotal : Number(partial);
-    promptSensitiveActionAuth(
-      t('parent.fees.confirmPayment', { amount: formatINR(amt) }),
-      async token => {
-        setBusy(true);
-        const r2 = await feeService.createOrder(scope, { ...req, stepUpToken: token });
-        setBusy(false);
-        if (!r2.ok) {
-          setError(r2.error);
-          return;
-        }
-        handleOrder(r2.data);
-      },
-      'PAYMENT'
-    );
-  };
-
-  const confirm = () => {
-    if (!order) return;
-    promptSensitiveActionAuth(
-      t('parent.fees.confirmPayment', { amount: formatINR(order.amount) }),
-      async token => {
-        setBusy(true);
-        const r = await feeService.confirmMockPayment(scope, order.orderId, method, token);
-        setBusy(false);
-        if (!r.ok) {
-          setError(r.error);
-          if (r.code !== 'STEP_UP_REQUIRED') setOrder(null);
-          return;
-        }
-        setOrder(null);
-        setSelected([]);
-        setPartial('');
-        setReceipt(r.data);
-        summary.reload();
-        history.reload();
-      },
-      'PAYMENT'
-    );
-  };
 
   if (summary.status === 'loading') return <LoadingBlock />;
   if (summary.status === 'error') return <ErrorState message={summary.error} onRetry={summary.reload} />;
   const s = summary.data;
+  // Show the year on each instalment when dues span more than one academic year (arrears or next year's fees).
+  const years = new Set(s.instalments.map(i => i.academicYear).filter(Boolean));
+  const showYear = years.size > 1;
+  const termTitle = (number: number, label: string, year?: string | null) =>
+    `${formatTermTitle(number, label)}${showYear && year ? ` · ${year}` : ''}`;
+  const lineLabel = (chargeId: string) => {
+    for (const ins of s.instalments) {
+      const line = ins.lines.find(l => l.charge.id === chargeId);
+      if (line) return `${termTitle(ins.number, ins.label, ins.academicYear)} · ${line.charge.label}`;
+    }
+    return chargeId;
+  };
 
   return (
     <div className="space-y-5">
@@ -214,61 +73,49 @@ export const ParentFeesPage: React.FC = () => {
         <>
           <Section title={t('parent.fees.instalments')}>
             <ul className="space-y-2.5">
-              {s.instalments.map(ins => {
-                const isSel = selected.includes(ins.number);
-                const clickable = ins.outstanding > 0 && mode === 'TERMS';
-                return (
-                  <li key={ins.number}>
-                    <Panel className={`p-3.5 ${isSel ? 'border-blue-600 ring-1 ring-blue-600' : ''}`}>
-                      <button type="button" disabled={!clickable} onClick={() => toggle(ins.number)} className="w-full text-left disabled:cursor-default">
-                        <div className="flex items-center gap-3">
-                          {ins.outstanding > 0 ? (
-                            <span className={`w-6 h-6 rounded-md border-2 flex items-center justify-center ${isSel ? 'bg-blue-700 border-blue-700 text-white' : 'border-slate-300'}`} aria-hidden>
-                              {isSel && '✓'}
-                            </span>
-                          ) : (
-                            <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                          )}
-                          <span className="flex-1 min-w-0">
-                            <span className="block text-base font-semibold">
-                              {formatTermTitle(ins.number, ins.label)}
-                            </span>
-                            <span className="block text-sm text-slate-500">{t('parent.fees.dueOn', { date: formatDate(ins.dueOn, lang) })}</span>
-                          </span>
-                          <span className="text-right">
-                            <span className="block text-base font-bold">{ins.outstanding > 0 ? formatINR(ins.outstanding) : t('parent.fees.paidUp')}</span>
-                            {ins.overdue && <Pill tone="danger">{t('parent.fees.overdue')}</Pill>}
-                          </span>
-                        </div>
-                      </button>
-                      <ul className="mt-2 pl-9 space-y-0.5 text-sm text-slate-600">
-                        {ins.lines.map(l => (
-                          <li key={l.charge.id} className="flex justify-between gap-2">
-                            <span className="truncate">{l.charge.label}{l.concession > 0 ? ` (−${formatINR(l.concession)})` : ''}</span>
-                            <span className="font-mono">{l.outstanding > 0 ? formatINR(l.outstanding) : '✓'}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </Panel>
-                  </li>
-                );
-              })}
+              {s.instalments.map(ins => (
+                <li key={`${ins.academicYearId ?? 'year'}-${ins.number}`}>
+                  <Panel className="p-3.5">
+                    <div className="flex items-center gap-3">
+                      {ins.outstanding > 0 ? (
+                        <Receipt className="w-6 h-6 text-slate-400" aria-hidden />
+                      ) : (
+                        <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                      )}
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-base font-semibold">{termTitle(ins.number, ins.label, ins.academicYear)}</span>
+                        <span className="block text-sm text-slate-500">{t('parent.fees.dueOn', { date: formatDate(ins.dueOn, lang) })}</span>
+                      </span>
+                      <span className="text-right">
+                        <span className="block text-base font-bold">{ins.outstanding > 0 ? formatINR(ins.outstanding) : t('parent.fees.paidUp')}</span>
+                        {ins.overdue && <Pill tone="danger">{t('parent.fees.overdue')}</Pill>}
+                      </span>
+                    </div>
+                    <ul className="mt-2 pl-9 space-y-0.5 text-sm text-slate-600">
+                      {ins.lines.map(l => (
+                        <li key={l.charge.id} className="flex justify-between gap-2">
+                          <span className="truncate">{l.charge.label}{l.concession > 0 ? ` (−${formatINR(l.concession)})` : ''}</span>
+                          <span className="font-mono">{l.outstanding > 0 ? formatINR(l.outstanding) : '✓'}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Panel>
+                </li>
+              ))}
             </ul>
             {s.lateFeeNote && <p className="text-xs text-slate-500">{s.lateFeeNote}</p>}
           </Section>
 
-          {payable.length > 0 ? (
+          {s.totalOutstanding > 0 ? (
             <Panel className="p-4 space-y-3.5 border-rose-200 bg-rose-50/50 dark:bg-rose-950/20">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
                   <Lock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Examination Hall Ticket Locked
-                  </h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Fees due: {formatINR(s.totalOutstanding)}</h3>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">
-                    Pending fee balance: <strong className="text-rose-600 font-bold">{formatINR(s.totalOutstanding)}</strong>. Hall tickets remain locked until outstanding dues are cleared.
+                    A hall ticket is released only after the fees required for that exam are cleared.
                   </p>
                 </div>
               </div>
@@ -276,12 +123,13 @@ export const ParentFeesPage: React.FC = () => {
               <div className="p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs space-y-2">
                 <p className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                   <Building2 className="w-4 h-4 text-blue-600" />
-                  <span>How to pay and unlock your hall ticket:</span>
+                  <span>How to pay:</span>
                 </p>
                 <ol className="list-decimal pl-4 space-y-1 text-slate-600 dark:text-slate-300">
-                  <li>Visit the school fee counter, or pay by direct bank transfer or campus QR code.</li>
+                  <li>Pay at the school fee counter.</li>
                   <li>Give your child's admission number to the school accountant.</li>
-                  <li>Once the fee office records the receipt, your balance updates to <strong>₹0</strong> and the <strong>Examination Hall Ticket will automatically unlock</strong>.</li>
+                  <li>The fee office records the payment and issues a receipt. Your balance and receipts update here.</li>
+                  <li>Once the exam's fees are cleared, the class teacher releases the hall ticket.</li>
                 </ol>
               </div>
             </Panel>
@@ -291,9 +139,7 @@ export const ParentFeesPage: React.FC = () => {
                 <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
                 <div>
                   <h3 className="text-sm font-bold">{t('parent.fees.allPaid')}</h3>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-                    Zero balance remaining. Examination Hall Tickets are cleared for release.
-                  </p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">No balance remaining. The class teacher releases hall tickets before each exam.</p>
                 </div>
               </div>
             </Panel>
@@ -318,7 +164,7 @@ export const ParentFeesPage: React.FC = () => {
                       {formatDateTime(p.paidAt, lang)} · {t(`parent.fees.method_${p.method}`)} · {p.receiptNo}
                     </span>
                   </span>
-                  {p.isMock && <MockLabel>mock</MockLabel>}
+                  {p.isMock && <MockLabel>demo</MockLabel>}
                 </Panel>
               </button>
             </li>
@@ -332,36 +178,6 @@ export const ParentFeesPage: React.FC = () => {
           ))}
         </ul>
       )}
-
-      {/* Simulated hosted checkout */}
-      <Modal isOpen={Boolean(order)} onClose={() => !busy && setOrder(null)} title={t('parent.fees.checkout')}>
-        {order && (
-          <div className="space-y-4">
-            <MockLabel>{t('parent.fees.mockCheckout')}</MockLabel>
-            <p className="text-3xl font-bold">{formatINR(order.amount)}</p>
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-700">{t('parent.fees.method')}</p>
-              {METHODS.map(m => (
-                <label key={m} className={`flex items-center gap-3 min-h-12 px-3 rounded-xl border ${method === m ? 'border-blue-600 bg-blue-50' : 'border-slate-200'}`}>
-                  <input type="radio" name="method" checked={method === m} onChange={() => setMethod(m)} className="accent-blue-700" />
-                  <span className="text-base">{t(`parent.fees.method_${m}`)}</span>
-                </label>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500 flex items-start gap-1.5">
-              <ShieldCheck className="w-4 h-4 shrink-0" />
-              {t('parent.fees.noSecrets')}
-            </p>
-            <ErrorBox message={error} />
-            <PrimaryButton onClick={confirm} loading={busy}>
-              {t('parent.fees.payAmount', { amount: formatINR(order.amount) })}
-            </PrimaryButton>
-            <LinkButton onClick={() => setOrder(null)} disabled={busy}>
-              {t('login.cancel')}
-            </LinkButton>
-          </div>
-        )}
-      </Modal>
 
       <Modal isOpen={Boolean(receipt)} onClose={() => setReceipt(null)} title={t('parent.fees.receipt')}>
         {receipt && (
@@ -383,15 +199,12 @@ export const ParentFeesPage: React.FC = () => {
             <div>
               <p className="font-semibold mb-1">{t('parent.fees.allocation')}</p>
               <ul className="space-y-0.5">
-                {receipt.allocations.map(a => {
-                  const line = s.instalments.flatMap(i => i.lines).find(l => l.charge.id === a.chargeId);
-                  return (
-                    <li key={a.chargeId} className="flex justify-between">
-                      <span>{line ? `Term ${line.charge.instalment} · ${line.charge.label}` : a.chargeId}</span>
-                      <span className="font-mono">{formatINR(a.amount)}</span>
-                    </li>
-                  );
-                })}
+                {receipt.allocations.map(a => (
+                  <li key={a.chargeId} className="flex justify-between gap-2">
+                    <span>{lineLabel(a.chargeId)}</span>
+                    <span className="font-mono">{formatINR(a.amount)}</span>
+                  </li>
+                ))}
               </ul>
             </div>
             <p className="text-xs text-slate-500">{t('parent.fees.hallTicketNote')}</p>
@@ -408,10 +221,7 @@ export const ParentFeesPage: React.FC = () => {
                   method: t(`parent.fees.method_${receipt.method}`),
                   amount: receipt.amount,
                   providerRef: receipt.providerRef,
-                  allocations: receipt.allocations.map(a => {
-                    const line = s.instalments.flatMap(i => i.lines).find(l => l.charge.id === a.chargeId);
-                    return { label: line ? `Term ${line.charge.instalment} · ${line.charge.label}` : a.chargeId, amount: a.amount };
-                  })
+                  allocations: receipt.allocations.map(a => ({ label: lineLabel(a.chargeId), amount: a.amount }))
                 })
               }
               className="w-full min-h-11 rounded-xl border border-blue-200 bg-blue-50 text-blue-800 font-semibold inline-flex items-center justify-center gap-2"

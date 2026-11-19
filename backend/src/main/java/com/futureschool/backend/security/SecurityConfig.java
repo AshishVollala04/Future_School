@@ -89,7 +89,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/auth/invitations/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/idp/providers").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/invitations/*/accept").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/payments/razorpay/webhook").permitAll()
+                        // No online payments: parents pay at the school counter; finance staff record it (/api/office/fees/cash).
+                        .requestMatchers("/api/payments/**", "/api/parent/fees/orders", "/api/parent/fees/orders/**").denyAll()
                         // Bus driver link pages: the unguessable token in the path is the key (only its hash is stored).
                         .requestMatchers(HttpMethod.GET, "/api/public/bus/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/public/bus/*/start", "/api/public/bus/*/ping", "/api/public/bus/*/end",

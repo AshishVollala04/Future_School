@@ -7,4 +7,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface FeeChargeRepository extends JpaRepository<FeeCharge, String> {
     java.util.List<FeeCharge> findByStudentIdOrderByDueOnAscIdAsc(String studentId);
+
+    boolean existsByStudentIdAndAcademicYearId(String studentId, String academicYearId);
+
+    java.util.List<FeeCharge> findByAcademicYearIdIsNull();
 }

@@ -12,6 +12,7 @@ import com.futureschool.backend.repository.ParentRepository;
 import com.futureschool.backend.repository.SchoolMembershipRepository;
 import com.futureschool.backend.repository.StudentRepository;
 import com.futureschool.backend.repository.UserAccountRepository;
+import com.futureschool.backend.roster.AcademicYearService;
 import com.futureschool.backend.tenant.TenantContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class StudentService {
     private final FeeInstalmentRepository instalmentRepository;
     private final FeeChargeRepository chargeRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AcademicYearService academicYears;
 
     public StudentService(
             MembershipService membershipService,
@@ -42,8 +44,10 @@ public class StudentService {
             ParentRepository parentRepository,
             FeeInstalmentRepository instalmentRepository,
             FeeChargeRepository chargeRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AcademicYearService academicYears
     ) {
+        this.academicYears = academicYears;
         this.membershipService = membershipService;
         this.studentRepository = studentRepository;
         this.userAccountRepository = userAccountRepository;
@@ -86,6 +90,12 @@ public class StudentService {
     @Transactional
     public Student createStudent(Student student, String initialPassword) {
         String school = TenantContext.require();
+        // Safe to retry: the admission number identifies a student in a school, so a repeated "add" is refused, not duplicated.
+        if (student.getAdmissionNumber() != null && !student.getAdmissionNumber().isBlank()
+                && studentRepository.findByAdmissionNumber(student.getAdmissionNumber().trim()).isPresent()) {
+            throw com.futureschool.backend.teaching.Teaching.rule("DUPLICATE_ADMISSION",
+                    "A student with admission number " + student.getAdmissionNumber().trim() + " already exists.");
+        }
         if (student.getId() == null || student.getId().isBlank()) {
             int year = Year.now().getValue();
             long seq = studentRepository.count() + 1;
@@ -174,38 +184,44 @@ public class StudentService {
                     });
         }
 
-        // Provision Term 1..4 fee charges when an annual fee / feeBalance is provided for active students
+        // School fee for the CURRENT academic year, split over that year's configured schedule.
+        // No schedule = no charges (never invented dates); the CSV import reports it per row.
         if ("Active".equalsIgnoreCase(saved.getStatus()) && saved.getFeeBalance() != null && saved.getFeeBalance() > 0) {
-            provisionAnnualFees(instalmentRepository, chargeRepository, school, saved, Math.round(saved.getFeeBalance()));
+            String yearId = academicYears.ensureCurrent().getId();
+            provisionYearFees(instalmentRepository, chargeRepository, saved, Math.round(saved.getFeeBalance()), yearId, yearId);
         }
 
         return saved;
     }
 
-    /** Ensures standard 4 Term fee instalments exist for a school and creates quarterly SCHOOL_FEE charges for a student. */
-    public static List<FeeInstalment> ensureDefaultInstalments(FeeInstalmentRepository instalments, String school) {
-        List<FeeInstalment> list = instalments.findAllByOrderByNumberAsc();
-        if (!list.isEmpty()) return list;
-        List<FeeInstalment> defaults = List.of(
-                FeeInstalment.builder().id(school + "-INS-1").number(1).label("Term 1").dueOn("2026-06-15").build(),
-                FeeInstalment.builder().id(school + "-INS-2").number(2).label("Term 2").dueOn("2026-11-15").build(),
-                FeeInstalment.builder().id(school + "-INS-3").number(3).label("Term 3").dueOn("2027-01-10").build(),
-                FeeInstalment.builder().id(school + "-INS-4").number(4).label("Term 4").dueOn("2027-02-10").build()
-        );
-        return instalments.saveAll(defaults);
+    /** The configured fee schedule of one academic year (year-less pre-V13 rows count as the current year). */
+    public static List<FeeInstalment> scheduleFor(FeeInstalmentRepository instalments, String yearId, String currentYearId) {
+        return instalments.findAllByOrderByNumberAsc().stream()
+                .filter(i -> AcademicYearService.sameYear(i.getAcademicYearId(), yearId, currentYearId)).toList();
     }
 
-    public static void provisionAnnualFees(FeeInstalmentRepository instalments, FeeChargeRepository charges, String school, Student s, long annualFee) {
-        if (annualFee <= 0 || !charges.findByStudentIdOrderByDueOnAscIdAsc(s.getId()).isEmpty()) return;
-        List<FeeInstalment> terms = ensureDefaultInstalments(instalments, school);
+    /**
+     * Creates SCHOOL_FEE charges for one student for one academic year, split over that year's
+     * schedule and due dates. Safe to retry: a student already charged for that year gets nothing new.
+     * Returns how many charges were created (0 when already charged or the year has no schedule).
+     */
+    public static int provisionYearFees(FeeInstalmentRepository instalments, FeeChargeRepository charges, Student s, long annualFee,
+                                        String yearId, String currentYearId) {
+        if (annualFee <= 0) return 0;
+        List<FeeInstalment> terms = scheduleFor(instalments, yearId, currentYearId);
+        if (terms.isEmpty()) return 0;
+        boolean alreadyCharged = charges.findByStudentIdOrderByDueOnAscIdAsc(s.getId()).stream()
+                .anyMatch(c -> AcademicYearService.sameYear(c.getAcademicYearId(), yearId, currentYearId));
+        if (alreadyCharged) return 0;
         long base = annualFee / terms.size();
         long rem = annualFee - (base * terms.size());
         for (int i = 0; i < terms.size(); i++) {
             FeeInstalment ins = terms.get(i);
             long amt = base + (i == 0 ? rem : 0);
             charges.save(FeeCharge.builder()
-                    .id(s.getId() + "-SF-" + ins.getNumber())
+                    .id(s.getId() + "-" + yearId + "-SF-" + ins.getNumber())
                     .studentId(s.getId())
+                    .academicYearId(yearId)
                     .category("SCHOOL_FEE")
                     .instalment(ins.getNumber())
                     .label("School fee")
@@ -213,6 +229,7 @@ public class StudentService {
                     .dueOn(ins.getDueOn())
                     .build());
         }
+        return terms.size();
     }
 
     @Transactional

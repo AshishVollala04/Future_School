@@ -167,4 +167,49 @@ await check('withApiAdmin and withApiCounts fetch live endpoints without calling
   assert.equal(mockCalled, false);
 });
 
+await check('postNotice POSTs audience, title, body and priority to /api/staff/notices', async () => {
+  const { ApiCommunicationService } = await import('../../src/services/api/commsApiServices.ts');
+  recorded.length = 0;
+  const notice = { id: 'NT-GVS-1', schoolId: 'GVS', audience: ['GVS-10-A'], title: 'Science fair', body: 'Bring your models.', publishedAt: '2026-11-19T09:00:00Z', priority: 'IMPORTANT' };
+  nextResponse = { status: 200, body: notice };
+  const scope = { schoolId: 'GVS', userId: 'STF-T-0001', role: 'TEACHER' as const };
+  const r = await new ApiCommunicationService().postNotice(scope, { audience: ['GVS-10-A'], title: 'Science fair', body: 'Bring your models.', priority: 'IMPORTANT' });
+  assert.equal(r.ok, true);
+  assert.equal(recorded[0].method, 'POST');
+  assert.ok(recorded[0].url.endsWith('/api/staff/notices'));
+  assert.deepEqual(JSON.parse(recorded[0].body ?? '{}'), { audience: ['GVS-10-A'], title: 'Science fair', body: 'Bring your models.', priority: 'IMPORTANT' });
+
+  // Server refusals (e.g. a class the teacher is not assigned to) come back as a normal failed result.
+  nextResponse = { status: 403, body: { success: false, error: 'You can send notices only to your own class.', code: 'DENIED' } };
+  const denied = await new ApiCommunicationService().postNotice(scope, { audience: ['GVS-9-A'], title: 'X notice', body: 'Some text', priority: 'NORMAL' });
+  assert.equal(denied.ok, false);
+});
+
+await check('roster service calls the academic-year roster endpoints with explicit decisions', async () => {
+  const { rosterService } = await import('../../src/services/rosterService.ts');
+  recorded.length = 0;
+  nextResponse = { status: 200, body: { dryRun: true, applied: false, summary: { promoted: 1, repeated: 0, added: 0, exited: 0, skipped: 0, needsCorrection: 0 }, rows: [] } };
+  const decisions = [{ studentId: 'GVS-2027-0001', action: 'PROMOTE' as const, toClassId: 'GVS-11-A', roll: '18' }];
+  const added = [{ admissionNumber: 'ADM-1', name: 'New Kid', toClassId: 'GVS-6-B', roll: '01', guardianName: 'Parent', guardianMobile: '9123400001' }];
+  assert.equal((await rosterService.preview('AY-GVS-2027-28', decisions, added)).ok, true);
+  assert.equal(recorded[0].method, 'POST');
+  assert.ok(recorded[0].url.endsWith('/api/admin/roster/years/AY-GVS-2027-28/preview'));
+  assert.deepEqual(JSON.parse(recorded[0].body ?? '{}'), { decisions, newStudents: added });
+
+  await rosterService.apply('AY-GVS-2027-28', decisions, []);
+  assert.ok(recorded[1].url.endsWith('/api/admin/roster/years/AY-GVS-2027-28/apply'));
+  nextResponse = { status: 200, body: { started: true } };
+  await rosterService.start('AY-GVS-2027-28');
+  assert.ok(recorded[2].url.endsWith('/api/admin/roster/years/AY-GVS-2027-28/start'));
+  nextResponse = { status: 200, body: { year: {}, schedule: [] } };
+  await rosterService.setFeeSchedule('AY-GVS-2027-28', [{ number: 1, label: 'Term 1', dueOn: '2027-06-15' }]);
+  assert.equal(recorded[3].method, 'PUT');
+  assert.ok(recorded[3].url.endsWith('/api/admin/roster/years/AY-GVS-2027-28/fee-schedule'));
+
+  // A server refusal (e.g. no ADMISSIONS permission) is a normal failed result, not an exception.
+  nextResponse = { status: 403, body: { success: false, error: 'You do not have the admissions permission.', code: 'FORBIDDEN' } };
+  const denied = await rosterService.apply('AY-GVS-2027-28', decisions, []);
+  assert.equal(denied.ok, false);
+});
+
 if (passed === 0) process.exit(1);

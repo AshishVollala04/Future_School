@@ -1,38 +1,23 @@
 /**
- * FeeService.
+ * FeeService: what a parent sees about their child's fees.
  *
- * Production flow: backend calculates the amount -> creates a payment-provider order ->
- * hosted checkout -> provider webhook verified server-side -> allocations + receipt.
- * The browser never decides that a payment succeeded and never handles card/UPI data.
- *
- * Prototype: confirmMockPayment() stands in for "provider webhook verified". It is
- * clearly labelled mock and requires a fresh step-up OTP token.
+ * Parents do not pay in the app. Fees are paid at the school counter and recorded by finance staff
+ * (fee desk), who issue the official receipt; this service only reads dues, paid amounts,
+ * concessions, due dates and recorded receipts. There is no order, checkout or payment call.
  */
 import type { Scope } from '../hooks/useScope';
 import { Result } from '../types/session';
-import { FeeLine, FeeSummary, Payment, PaymentAllocation, PaymentOrder, Refund } from '../types/domain';
-import { getDb, saveDb } from '../mock/db';
+import { FeeLine, FeeSummary, Payment, PaymentAllocation, Refund } from '../types/domain';
+import { getDb } from '../mock/db';
 import { SchoolDb } from '../mock/db/seed';
-import { guarded, RuleError, studentInScope, AccessDenied } from './mock/guard';
-import { authService } from './authService';
-import { auditService } from './auditService';
+import { guarded, studentInScope } from './mock/guard';
 import { todayISO } from '../utils/date';
 import { USE_BACKEND } from '../app/backendConfig';
 import { ApiFeeService } from './api/parentApiServices';
 
-export const PARTIAL_PAYMENT_MINIMUM = 1000;
-
 export interface FeeService {
   getSummary(scope: Scope): Promise<Result<FeeSummary>>;
   listPayments(scope: Scope): Promise<Result<{ payments: Payment[]; refunds: Refund[] }>>;
-  /** Either whole instalments, or a partial amount (allocated oldest-due first). */
-  createOrder(scope: Scope, req: { instalments?: number[]; amount?: number; stepUpToken?: string }): Promise<Result<PaymentOrder>>;
-  confirmMockPayment(scope: Scope, orderId: string, method: Payment['method'], stepUpToken: string): Promise<Result<Payment>>;
-  verifyPayment(
-    scope: Scope,
-    orderId: string,
-    req: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string; method: Payment['method']; stepUpToken?: string }
-  ): Promise<Result<Payment>>;
 }
 
 /** Pure fee arithmetic, shared with HallTicketService. */
@@ -80,11 +65,8 @@ export function allocate(lines: FeeLine[], amount: number): PaymentAllocation[] 
   return out;
 }
 
-const ORDER_TTL_MS = 15 * 60 * 1000;
 
 class MockFeeService implements FeeService {
-  private orders = new Map<string, PaymentOrder & { schoolId: string }>();
-
   getSummary(scope: Scope) {
     return guarded(() => {
       const s = studentInScope(scope);
@@ -102,103 +84,7 @@ class MockFeeService implements FeeService {
     });
   }
 
-  createOrder(scope: Scope, req: { instalments?: number[]; amount?: number; stepUpToken?: string }) {
-    return guarded(() => {
-      if (scope.role !== 'PARENT') throw new AccessDenied('Online payment is made by the parent.');
-      const s = studentInScope(scope);
-      const db = getDb(scope.schoolId);
-      const lines = computeFeeLines(db, s.id);
-      const totalOutstanding = lines.reduce((a, x) => a + x.outstanding, 0);
-      if (totalOutstanding <= 0) throw new RuleError('There is nothing to pay.', 'NOTHING_DUE');
 
-      let allocations: PaymentAllocation[];
-      if (req.instalments && req.instalments.length) {
-        const chosen = lines.filter(l => req.instalments!.includes(l.charge.instalment));
-        allocations = chosen.filter(l => l.outstanding > 0).map(l => ({ chargeId: l.charge.id, amount: l.outstanding }));
-      } else {
-        const amount = Math.floor(req.amount ?? 0);
-        if (amount <= 0) throw new RuleError('Enter an amount.', 'BAD_AMOUNT');
-        if (amount > totalOutstanding) throw new RuleError('Amount is more than the outstanding balance.', 'BAD_AMOUNT');
-        if (amount < Math.min(PARTIAL_PAYMENT_MINIMUM, totalOutstanding)) {
-          throw new RuleError(`Minimum part payment is ₹${PARTIAL_PAYMENT_MINIMUM.toLocaleString('en-IN')}.`, 'BAD_AMOUNT');
-        }
-        allocations = allocate(lines, amount);
-      }
-      const amount = allocations.reduce((a, x) => a + x.amount, 0);
-      if (amount <= 0) throw new RuleError('Selected instalments are already paid.', 'NOTHING_DUE');
-      const order = {
-        orderId: `order_mock_${Date.now().toString(36)}`,
-        studentId: s.id,
-        amount,
-        allocations,
-        expiresAt: Date.now() + ORDER_TTL_MS,
-        isMock: true,
-        schoolId: scope.schoolId
-      };
-      this.orders.set(order.orderId, order);
-      const { schoolId: _s, ...view } = order;
-      return view;
-    });
-  }
-
-  confirmMockPayment(scope: Scope, orderId: string, method: Payment['method'], stepUpToken: string) {
-    return guarded(() => {
-      const order = this.orders.get(orderId);
-      if (!order || order.schoolId !== scope.schoolId) throw new RuleError('Payment session not found. Start again.', 'NO_ORDER');
-      const s = studentInScope(scope, order.studentId);
-      if (Date.now() > order.expiresAt) {
-        this.orders.delete(orderId);
-        throw new RuleError('Payment session expired. Start again.', 'ORDER_EXPIRED');
-      }
-      if (!authService.consumeStepUp(stepUpToken, 'PAYMENT')) {
-        throw new RuleError('Please confirm with the OTP again.', 'STEP_UP_REQUIRED');
-      }
-      // Fresh validation at "webhook" time: dues may have changed since the order was created.
-      const db = getDb(scope.schoolId);
-      const lines = computeFeeLines(db, s.id);
-      for (const a of order.allocations) {
-        const l = lines.find(x => x.charge.id === a.chargeId);
-        if (!l || l.outstanding < a.amount) {
-          this.orders.delete(orderId);
-          throw new RuleError('Your dues changed. Please start the payment again.', 'STALE_ORDER');
-        }
-      }
-      const seq = db.payments.length + 1001;
-      const payment: Payment = {
-        id: `PAY-${scope.schoolId}-${Date.now().toString(36)}`,
-        schoolId: scope.schoolId,
-        studentId: s.id,
-        amount: order.amount,
-        method,
-        providerRef: order.orderId,
-        paidAt: new Date().toISOString(),
-        paidByGuardianId: scope.userId,
-        receiptNo: `${scope.schoolId}/2026-27/${seq}`,
-        allocations: order.allocations,
-        isMock: true
-      };
-      db.payments.push(payment);
-      saveDb(db);
-      this.orders.delete(orderId);
-      auditService.record({
-        schoolId: scope.schoolId,
-        action: 'FEE_PAYMENT_RECORDED',
-        actorId: scope.userId,
-        actorRole: scope.role,
-        targetId: s.id,
-        details: `Prototype / mock payment ${payment.receiptNo} for ₹${payment.amount}.`
-      });
-      return payment;
-    });
-  }
-
-  verifyPayment(
-    scope: Scope,
-    orderId: string,
-    req: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string; method: Payment['method']; stepUpToken?: string }
-  ) {
-    return this.confirmMockPayment(scope, orderId, req.method, req.stepUpToken ?? '');
-  }
 }
 
 export const feeService: FeeService = USE_BACKEND ? new ApiFeeService() : new MockFeeService();

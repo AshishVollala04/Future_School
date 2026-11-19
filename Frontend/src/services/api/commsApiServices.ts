@@ -4,12 +4,15 @@
  */
 import type { Scope } from '../../hooks/useScope';
 import { Meeting, MessageCategory, MessageThread, Notice } from '../../types/domain';
-import type { CommunicationService, ConsentView, Recipient } from '../communicationService';
+import type { CommunicationService, ConsentView, NewNotice, Recipient } from '../communicationService';
 import type { AcademicsService, HomeworkView } from '../academicsService';
 import { api } from './http';
 
 export class ApiCommunicationService implements CommunicationService {
   getNotices = (s: Scope) => api.get<Notice[]>(s.role === 'PARENT' ? '/api/parent/notices' : '/api/staff/notices');
+  /** Server re-checks role, audience and priority and writes the audit event (CommsService.publishNotice). */
+  postNotice = (_s: Scope, req: NewNotice) =>
+    api.post<Notice>('/api/staff/notices', { audience: req.audience, title: req.title, body: req.body, priority: req.priority });
   getRecipients = (_s: Scope) => api.get<Recipient[]>('/api/parent/messages/recipients');
   getThreads = (_s: Scope) => api.get<MessageThread[]>('/api/parent/messages');
   startThread = (_s: Scope, req: { staffId: string; category: MessageCategory; subject: string; body: string }) => api.post<MessageThread>('/api/parent/messages', req);

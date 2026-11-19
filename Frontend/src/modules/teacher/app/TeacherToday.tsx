@@ -1,89 +1,87 @@
-/** Teacher "Today": my periods + things waiting on me, split by hat. */
+/**
+ * Teacher "Today", laid out like the Parent home:
+ *   1. Quick cards with live counts (an orange dot marks what needs action):
+ *      Homework, Messages from parents, and for Class Teachers: Leave requests, Hall ticket.
+ *   2. The red Notice board banner with the latest notice.
+ *   3. My periods and Substitution duty.
+ */
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { BookOpenCheck, MessageSquare, ShieldCheck, UserCheck } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
 import { academicsService } from '../../../services/academicsService';
-import { marksService } from '../../../services/marksService';
 import { leaveService } from '../../../services/leaveService';
-import { attendanceService } from '../../../services/attendanceService';
 import { hallTicketService } from '../../../services/hallTicketService';
 import { substitutionService } from '../../../services/substitutionService';
+import { teacherCommsService } from '../../../services/teacherCommsService';
+import { communicationService } from '../../../services/communicationService';
+import { waitingThreads } from '../../../services/teacherAlertsService';
 import { EmptyState, LoadingBlock, Panel, Pill, Section } from '../../../components/common/States';
+import { NoticeBoardCard, QuickCard } from '../../../components/common/HomeCards';
 import { formatDate, isoWeekday, todayISO } from '../../../utils/date';
-
-interface Task {
-  to: string;
-  title: string;
-  detail: string;
-  tone: 'warning' | 'info' | 'danger';
-}
 
 export const TeacherToday: React.FC = () => {
   const scope = useScope();
-  const a = useQuery(() => academicsService.getTeacherAssignments(scope), [scope.schoolId, scope.userId]);
-  const sheets = useQuery(() => marksService.listMySheets(scope), [scope.schoolId, scope.userId]);
-  const periods = useQuery(() => academicsService.getMyPeriods(scope, isoWeekday()), [scope.schoolId, scope.userId]);
-  const duties = useQuery(() => substitutionService.myDuties(scope), [scope.schoolId, scope.userId]);
+  const mine = [scope.schoolId, scope.userId];
+  const a = useQuery(() => academicsService.getTeacherAssignments(scope), mine);
+  const periods = useQuery(() => academicsService.getMyPeriods(scope, isoWeekday()), mine);
+  const duties = useQuery(() => substitutionService.myDuties(scope), mine);
+  const homework = useQuery(() => teacherCommsService.myHomework(scope), mine);
+  const inbox = useQuery(() => teacherCommsService.inbox(scope), mine);
+  const notices = useQuery(() => communicationService.getNotices(scope), mine);
   const ct = a.data?.classTeacherOf ?? null;
   const today = todayISO();
   const ctKey = [scope.schoolId, ct?.id];
   const leaves = useQuery(() => (ct ? leaveService.listForClass(scope, ct.id) : Promise.resolve({ ok: true as const, data: [] })), ctKey);
-  const morning = useQuery(() => (ct ? attendanceService.getRegister(scope, ct.id, today, 'MORNING') : Promise.resolve({ ok: true as const, data: null })), ctKey);
-  const review = useQuery(
-    () => (ct ? marksService.openAssessments(scope, ct.grade).then(r => (r.ok && r.data[0] ? marksService.listClassSheets(scope, r.data[0].id, ct.id) : { ok: true as const, data: [] })) : Promise.resolve({ ok: true as const, data: [] })),
-    ctKey
-  );
   const tickets = useQuery(() => (ct ? hallTicketService.listForClass(scope, ct.id) : Promise.resolve({ ok: true as const, data: [] })), ctKey);
 
   if (a.status === 'loading') return <LoadingBlock />;
 
   const myPeriods = (periods.data ?? []).map(s => ({ ...s, cls: s.classLabel }));
 
-  const teachingTasks: Task[] = (sheets.data ?? [])
-    .filter(s => s.sheet.status !== 'SUBMITTED' && s.sheet.status !== 'ACCEPTED')
-    .map(s => ({
-      to: `/teacher/marks?sheet=${encodeURIComponent(s.sheet.id)}`,
-      title: `${s.assessment.name} marks · ${s.sheet.subject} ${s.classSection.grade}-${s.classSection.section}`,
-      detail: s.sheet.status === 'RETURNED' ? `Returned: ${s.sheet.returnReason}` : `${s.entered}/${s.total} entered`,
-      tone: s.sheet.status === 'RETURNED' ? 'danger' : 'warning'
-    }));
+  // ---- live counts for the quick cards ('…' while a count is still loading)
+  const hw = homework.data ?? [];
+  const toCheck = hw.reduce((n, h) => n + h.students.filter(s => s.status === 'SUBMITTED').length, 0);
+  const activeHw = hw.filter(h => h.dueOn >= today).length;
+  const hwStatus = homework.status !== 'ready' ? '…' : toCheck > 0 ? `${toCheck} to check` : activeHw > 0 ? `${activeHw} active` : 'None active';
 
-  const ctTasks: Task[] = [];
-  if (ct) {
-    if (morning.data && !morning.data.saved && new Date().getDay() !== 0) ctTasks.push({ to: '/teacher/attendance', title: 'Morning attendance not taken', detail: `Class ${ct.grade}-${ct.section}`, tone: 'warning' });
-    const pl = (leaves.data ?? []).filter(l => l.status === 'PENDING');
-    if (pl.length) ctTasks.push({ to: '/teacher/leave-requests', title: `${pl.length} leave request(s) to review`, detail: pl.map(l => l.studentName).join(', '), tone: 'warning' });
-    const toReview = (review.data ?? []).filter(s => s.sheet.status === 'SUBMITTED');
-    if (toReview.length) ctTasks.push({ to: '/teacher/class-results', title: `${toReview.length} subject(s) submitted for your review`, detail: toReview.map(s => s.sheet.subject).join(', '), tone: 'info' });
-    const toRelease = (tickets.data ?? []).filter(t => t.feeClearance === 'CLEARED' && !t.release);
-    if (toRelease.length) ctTasks.push({ to: '/teacher/hall-tickets', title: `${toRelease.length} hall ticket(s) ready to release`, detail: 'Fee cleared, waiting for you', tone: 'info' });
-  }
+  const waiting = waitingThreads(inbox.data ?? []).length;
+  const msgStatus = inbox.status !== 'ready' ? '…' : waiting > 0 ? `${waiting} waiting for reply` : 'All replied';
 
-  const tone = { warning: 'border-amber-300 bg-amber-50', info: 'border-blue-200 bg-white', danger: 'border-rose-300 bg-rose-50' };
-  const TaskList: React.FC<{ tasks: Task[]; empty: string }> = ({ tasks, empty }) =>
-    tasks.length === 0 ? (
-      <EmptyState title={empty} />
-    ) : (
-      <ul className="space-y-2">
-        {tasks.map(t => (
-          <li key={t.to + t.title}>
-            <Link to={t.to} className={`flex items-center gap-3 p-3.5 rounded-2xl border ${tone[t.tone]}`}>
-              <span className="flex-1 min-w-0">
-                <span className="block font-semibold">{t.title}</span>
-                <span className="block text-sm text-slate-600 truncate">{t.detail}</span>
-              </span>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </Link>
-          </li>
-        ))}
-      </ul>
-    );
+  const pendingLeave = (leaves.data ?? []).filter(l => l.status === 'PENDING').length;
+  const leaveStatus = leaves.status !== 'ready' ? '…' : pendingLeave > 0 ? `${pendingLeave} pending` : 'None pending';
+
+  const toRelease = (tickets.data ?? []).filter(t => t.feeClearance === 'CLEARED' && !t.release).length;
+  const ticketStatus = tickets.status !== 'ready' ? '…' : toRelease > 0 ? `${toRelease} ready to release` : 'Nothing to release';
+
+  const latest = [...(notices.data ?? [])].sort((x, y) => Date.parse(y.publishedAt) - Date.parse(x.publishedAt))[0];
 
   return (
     <div className="space-y-6 max-w-3xl xl:max-w-6xl">
       <h1 className="text-xl font-bold">Today</h1>
+
+      {/* 1. Quick cards: swipe on a phone, a grid from tablet width. */}
+      <div className={`-mx-4 px-4 sm:-mx-6 sm:px-6 flex gap-3 overflow-x-auto no-scrollbar snap-x pb-1 md:mx-0 md:px-0 md:grid md:overflow-visible ${ct ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
+        <QuickCard to="/teacher/homework" icon={<BookOpenCheck className="w-6 h-6" />} tint="bg-blue-50 text-blue-700" title="Homework" status={hwStatus} alert={toCheck > 0} />
+        <QuickCard to="/teacher/messages" icon={<MessageSquare className="w-6 h-6" />} tint="bg-indigo-50 text-indigo-700" title="Messages from parents" status={msgStatus} alert={waiting > 0} />
+        {ct && (
+          <>
+            <QuickCard to="/teacher/leave-requests" icon={<UserCheck className="w-6 h-6" />} tint="bg-emerald-50 text-emerald-700" title="Leave requests" status={leaveStatus} alert={pendingLeave > 0} />
+            <QuickCard to="/teacher/hall-tickets" icon={<ShieldCheck className="w-6 h-6" />} tint="bg-sky-50 text-sky-700" title="Hall ticket" status={ticketStatus} alert={toRelease > 0} />
+          </>
+        )}
+      </div>
+
+      {/* 2. Notice board (red, right under the quick cards, as on the Parent home) */}
+      <NoticeBoardCard
+        to="/teacher/notices"
+        heading="Notice board"
+        viewAll="View all"
+        emptyText="No notices yet"
+        latest={latest ? { title: latest.title, body: latest.body, date: formatDate(latest.publishedAt.slice(0, 10)) } : null}
+      />
+
+      {/* 3. Periods and substitution */}
       <Section title="My periods">
         {myPeriods.length === 0 ? (
           <EmptyState title="No periods today" />
@@ -110,14 +108,6 @@ export const TeacherToday: React.FC = () => {
               </div>
             ))}
           </Panel>
-        </Section>
-      )}
-      <Section title="My teaching">
-        {sheets.status === 'loading' ? <LoadingBlock lines={1} /> : <TaskList tasks={teachingTasks} empty="No marks waiting on you" />}
-      </Section>
-      {ct && (
-        <Section title={`My class (${ct.grade}-${ct.section})`}>
-          <TaskList tasks={ctTasks} empty="Nothing waiting for the class teacher" />
         </Section>
       )}
     </div>

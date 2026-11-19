@@ -11,9 +11,10 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  AlertOctagon, BookOpenCheck, Bus, CalendarCheck, CalendarClock, CalendarPlus, ChevronRight, ClipboardCheck, Clock,
-  FileCheck2, IndianRupee, Megaphone, NotebookPen, ShieldCheck, Ticket, Trophy
+  AlertOctagon, BookOpenCheck, Bus, CalendarCheck, CalendarClock, CalendarPlus, ClipboardCheck, Clock,
+  FileCheck2, IndianRupee, NotebookPen, ShieldCheck, Ticket, Trophy
 } from 'lucide-react';
+import { NoticeBoardCard, QuickCard } from '../../../components/common/HomeCards';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
 import { feeService } from '../../../services/feeService';
@@ -44,16 +45,6 @@ const iconClass: Record<Tone, string> = {
   warning: 'bg-orange-500 text-white',
   info: 'bg-blue-700 text-white'
 };
-
-/** One swipeable quick card. `alert` shows the orange dot from the reference design. */
-const QuickCard: React.FC<{ to: string; icon: React.ReactNode; tint: string; title: string; status: string; alert?: boolean }> = ({ to, icon, tint, title, status, alert }) => (
-  <Link to={to} className="lift snap-start shrink-0 w-40 md:w-auto rounded-3xl bg-white shadow-card border border-slate-100 p-4 relative">
-    {alert && <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-orange-500" aria-hidden="true" />}
-    <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${tint}`}>{icon}</span>
-    <span className="block mt-3 text-sm font-bold text-slate-900">{title}</span>
-    <span className={`block text-xs mt-0.5 ${alert ? 'text-orange-600 font-semibold' : 'text-slate-500'}`}>{status}</span>
-  </Link>
-);
 
 /** A grid tile: icon + title + a real status line. */
 const Tile: React.FC<{ to: string; icon: React.ReactNode; tint: string; title: string; status: string }> = ({ to, icon, tint, title, status }) => (
@@ -178,21 +169,13 @@ export const ParentHome: React.FC = () => {
       </div>
 
       {/* 2. Notice board (red, right under the quick cards) */}
-      <Link to="/parent/notices" className="lift block rounded-3xl bg-gradient-to-br from-rose-600 via-red-600 to-red-700 text-white p-5 shadow-float ring-1 ring-red-700/30">
-        <span className="flex items-center justify-between">
-          <span className="font-bold flex items-center gap-2"><Megaphone className="w-4 h-4" />{t('parent.ui.noticeBoard')}</span>
-          <span className="text-sm text-red-100 flex items-center">{t('parent.ui.viewAll')} <ChevronRight className="w-4 h-4" /></span>
-        </span>
-        {latest ? (
-          <span className="block mt-2">
-            <span className="block text-sm font-semibold">{latest.title}</span>
-            <span className="block text-sm text-red-50 line-clamp-2 mt-0.5">{latest.body}</span>
-            <span className="block text-xs text-red-200 mt-1.5">{formatDate(latest.publishedAt.slice(0, 10), lang)}</span>
-          </span>
-        ) : (
-          <span className="block mt-2 text-sm text-red-100">{t('parent.ui.noticesNone')}</span>
-        )}
-      </Link>
+      <NoticeBoardCard
+        to="/parent/notices"
+        heading={t('parent.ui.noticeBoard')}
+        viewAll={t('parent.ui.viewAll')}
+        emptyText={t('parent.ui.noticesNone')}
+        latest={latest ? { title: latest.title, body: latest.body, date: formatDate(latest.publishedAt.slice(0, 10), lang) } : null}
+      />
 
       {/* 3. Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">

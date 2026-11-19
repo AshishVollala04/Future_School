@@ -20,9 +20,11 @@ import java.util.Map;
 public class StudentController {
 
     private final StudentService studentService;
+    private final com.futureschool.backend.teaching.Teaching teaching;
 
-    public StudentController(StudentService studentService) {
+    public StudentController(StudentService studentService, com.futureschool.backend.teaching.Teaching teaching) {
         this.studentService = studentService;
+        this.teaching = teaching;
     }
 
     @GetMapping
@@ -82,8 +84,11 @@ public class StudentController {
             @RequestParam(required = false) String initialPassword
     ) {
         try {
-            GovernanceService.requirePermission(AccessPolicy.principal(auth), "ADMISSIONS");
-            return ResponseEntity.ok(studentService.createStudent(student, initialPassword));
+            var p = AccessPolicy.principal(auth);
+            GovernanceService.requirePermission(p, "ADMISSIONS");
+            Student created = studentService.createStudent(student, initialPassword);
+            teaching.record(p, "STUDENT_ADDED", created.getId(), "Added to " + created.getClassName() + "-" + created.getSection() + ".", null);
+            return ResponseEntity.ok(created);
         } catch (AuthFlowException e) {
             return ResponseEntity.status(e.getStatus()).body(Map.of("error", e.getMessage(), "code", e.getCode()));
         } catch (Exception e) {
@@ -126,11 +131,14 @@ public class StudentController {
             @RequestBody Map<String, String> body
     ) {
         try {
-            GovernanceService.requirePermission(AccessPolicy.principal(auth), "ADMISSIONS");
+            var p = AccessPolicy.principal(auth);
+            GovernanceService.requirePermission(p, "ADMISSIONS");
             String effectiveDate = body.getOrDefault("effectiveDate", java.time.LocalDate.now().toString());
             String reason = body.getOrDefault("reason", "Transferred");
             String destinationSchool = body.get("destinationSchool");
-            return ResponseEntity.ok(studentService.recordExit(id, effectiveDate, reason, destinationSchool));
+            Student exited = studentService.recordExit(id, effectiveDate, reason, destinationSchool);
+            teaching.record(p, "STUDENT_EXITED", exited.getId(), "Exit recorded, effective " + effectiveDate + ". Records are kept.", reason);
+            return ResponseEntity.ok(exited);
         } catch (AuthFlowException e) {
             return ResponseEntity.status(e.getStatus()).body(Map.of("error", e.getMessage(), "code", e.getCode()));
         } catch (Exception e) {
@@ -138,18 +146,15 @@ public class StudentController {
         }
     }
 
+    /**
+     * Retired: it set a flag with no fee-clearance check. Hall tickets are released only by the Class
+     * Teacher after server-computed fee clearance (/api/staff/hall-tickets/release), or by the audited
+     * Principal override.
+     */
     @PatchMapping("/{id}/hall-ticket")
-    @Operation(summary = "Release or approve exam hall ticket for student")
-    public ResponseEntity<?> updateHallTicket(
-            @PathVariable String id,
-            @RequestBody Map<String, Boolean> body
-    ) {
-        try {
-            Boolean released = body.get("released");
-            Boolean approved = body.get("approved");
-            return ResponseEntity.ok(studentService.updateHallTicket(id, released, approved));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    @Operation(summary = "Retired: use the Class Teacher hall-ticket release")
+    public ResponseEntity<?> updateHallTicket(@PathVariable String id, @RequestBody(required = false) Map<String, Boolean> body) {
+        return ResponseEntity.status(410).body(Map.of("success", false, "code", "RETIRED",
+                "error", "Hall tickets are released by the Class Teacher after fee clearance."));
     }
 }

@@ -14,13 +14,17 @@ public final class ParentViews {
     public record Instalment(int number, String label, String dueOn) {
     }
 
-    public record Charge(String id, String schoolId, String studentId, String category, int instalment, String label, long amount, String dueOn) {
+    /** academicYearId: the year the charge belongs to (null only on pre-V13 rows, read as the current year). */
+    public record Charge(String id, String schoolId, String studentId, String category, int instalment, String label, long amount, String dueOn,
+                         String academicYearId) {
     }
 
     public record FeeLine(Charge charge, long concession, long paid, long outstanding, boolean overdue) {
     }
 
-    public record InstalmentSummary(int number, String label, String dueOn, List<FeeLine> lines, long outstanding, boolean overdue) {
+    /** One instalment of one academic year (Term 1 of 2026-27 and Term 1 of 2027-28 are separate). */
+    public record InstalmentSummary(int number, String label, String dueOn, List<FeeLine> lines, long outstanding, boolean overdue,
+                                    String academicYearId, String academicYear) {
     }
 
     public record NextDue(Instalment instalment, long amount) {

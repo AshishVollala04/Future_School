@@ -24,4 +24,6 @@ public interface StudentRepository extends JpaRepository<Student, String> {
 
     long countByClassId(String classId);
     List<Student> findByClassIdAndStatusOrderByRollAsc(String classId, String status);
+
+    List<Student> findByStatusIn(java.util.Collection<String> statuses);
 }

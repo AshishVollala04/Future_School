@@ -122,7 +122,8 @@ public class ParentDataService {
             long concession = con.getOrDefault(c.getId(), 0L);
             long pd = paid.getOrDefault(c.getId(), 0L);
             long outstanding = Math.max(0, c.getAmount() - concession - pd);
-            return new FeeLine(new Charge(c.getId(), c.getSchoolId(), c.getStudentId(), c.getCategory(), c.getInstalment(), c.getLabel(), c.getAmount(), c.getDueOn()),
+            return new FeeLine(new Charge(c.getId(), c.getSchoolId(), c.getStudentId(), c.getCategory(), c.getInstalment(), c.getLabel(), c.getAmount(), c.getDueOn(),
+                    c.getAcademicYearId()),
                     concession, pd, outstanding, outstanding > 0 && c.getDueOn().compareTo(today) < 0);
         }).toList();
     }
@@ -137,10 +138,31 @@ public class ParentDataService {
     public FeeSummary summaryFor(Student s) {
         String today = today();
         List<FeeLine> lines = feeLines(s.getId(), today);
-        List<InstalmentSummary> ins = instalments.findAllByOrderByNumberAsc().stream().map(i -> {
-            List<FeeLine> l = lines.stream().filter(x -> x.charge().instalment() == i.getNumber()).toList();
-            return new InstalmentSummary(i.getNumber(), i.getLabel(), i.getDueOn(), l, l.stream().mapToLong(FeeLine::outstanding).sum(), l.stream().anyMatch(FeeLine::overdue));
-        }).toList();
+        // One summary per instalment PER YEAR: the current year's schedule, plus any other year this
+        // student has charges in (e.g. last year's arrears or next year's fees), oldest year first.
+        String currentId = academicYears.findByIsCurrentTrue().map(AcademicYear::getId).orElse(null);
+        Map<String, AcademicYear> yearsById = academicYears.findAll().stream().collect(Collectors.toMap(AcademicYear::getId, y -> y));
+        Set<String> yearsWithCharges = lines.stream().map(l -> l.charge().academicYearId() != null ? l.charge().academicYearId() : currentId)
+                .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        List<InstalmentSummary> ins = instalments.findAllByOrderByNumberAsc().stream()
+                .filter(i -> {
+                    String y = i.getAcademicYearId() != null ? i.getAcademicYearId() : currentId;
+                    return y == null || y.equals(currentId) || yearsWithCharges.contains(y);
+                })
+                .sorted(Comparator.comparing((FeeInstalment i) -> {
+                    AcademicYear y = yearsById.get(i.getAcademicYearId() != null ? i.getAcademicYearId() : String.valueOf(currentId));
+                    return y == null ? LocalDate.MIN : y.getStartDate();
+                }).thenComparing(FeeInstalment::getNumber))
+                .map(i -> {
+                    String yearId = i.getAcademicYearId() != null ? i.getAcademicYearId() : currentId;
+                    List<FeeLine> l = lines.stream()
+                            .filter(x -> x.charge().instalment() == i.getNumber()
+                                    && com.futureschool.backend.roster.AcademicYearService.sameYear(x.charge().academicYearId(), yearId, currentId))
+                            .toList();
+                    AcademicYear y = yearId == null ? null : yearsById.get(yearId);
+                    return new InstalmentSummary(i.getNumber(), i.getLabel(), i.getDueOn(), l, l.stream().mapToLong(FeeLine::outstanding).sum(),
+                            l.stream().anyMatch(FeeLine::overdue), yearId, y == null ? null : y.getName());
+                }).toList();
         NextDue next = ins.stream().filter(i -> i.outstanding() > 0).findFirst()
                 .map(i -> new NextDue(new Instalment(i.number(), i.label(), i.dueOn()), i.outstanding())).orElse(null);
         String policy = schools.findById(TenantContext.require()).map(School::getLateFeePolicy).orElse(null);
@@ -569,8 +591,18 @@ public class ParentDataService {
 
     public HallTicket hallTicket(ExamWindow e, Student s, int grade, String today) {
         List<String> cats = List.of(e.getClearanceCategoriesCsv().split(","));
-        Map<Integer, String> insLabel = instalments.findAllByOrderByNumberAsc().stream().collect(Collectors.toMap(FeeInstalment::getNumber, FeeInstalment::getLabel));
+        // The exam's clearance rule applies to the fees of the exam's own academic year (the year whose
+        // dates contain the exam; the current year when none is recorded), never to another year's terms.
+        String currentId = academicYears.findByIsCurrentTrue().map(AcademicYear::getId).orElse(null);
+        LocalDate examDay = LocalDate.parse(e.getStartsOn().substring(0, 10));
+        String examYearId = academicYears.findAll().stream()
+                .filter(y -> !examDay.isBefore(y.getStartDate()) && !examDay.isAfter(y.getEndDate()))
+                .map(AcademicYear::getId).findFirst().orElse(currentId);
+        Map<Integer, String> insLabel = instalments.findAllByOrderByNumberAsc().stream()
+                .filter(i -> com.futureschool.backend.roster.AcademicYearService.sameYear(i.getAcademicYearId(), examYearId, currentId))
+                .collect(Collectors.toMap(FeeInstalment::getNumber, FeeInstalment::getLabel, (a, b) -> a));
         List<String> pending = feeLines(s.getId(), today).stream()
+                .filter(l -> com.futureschool.backend.roster.AcademicYearService.sameYear(l.charge().academicYearId(), examYearId, currentId))
                 .filter(l -> cats.contains(l.charge().category()) && l.charge().instalment() <= e.getClearanceUptoInstalment() && l.outstanding() > 0)
                 .map(l -> insLabel.getOrDefault(l.charge().instalment(), "Instalment " + l.charge().instalment()) + ": "
                         + CATEGORY_LABEL.getOrDefault(l.charge().category(), l.charge().category()) + " " + inr(l.outstanding()) + " pending")

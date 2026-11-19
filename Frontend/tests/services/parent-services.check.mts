@@ -22,15 +22,19 @@ let sum:any=await feeService.getSummary(P); check('Aarav outstanding ins2 = 6000
 let ht:any=await hallTicketService.getForStudent(P); check('Aarav SA-1 PENDING with reason', ht.data[0].feeClearance==='PENDING' && /Term 2: School fee ₹6,000/.test(ht.data[0].pendingReasons[0]), ht.data[0]);
 let other:any=await feeService.getSummary({...P,studentId:'GVS-2027-0001'} as any);
 let leak:any=await hallTicketService.getForStudent(P,'GVS-2031-0042'); check('parent cannot read sibling via param', !leak.ok && leak.code==='FORBIDDEN');
-let small:any=await feeService.createOrder(P,{amount:500}); check('partial below minimum refused', !small.ok);
-let over:any=await feeService.createOrder(P,{amount:999999}); check('overpay refused', !over.ok);
-let ord:any=await feeService.createOrder(P,{instalments:[2]}); check('order for ins 2 = 6000', ord.ok && ord.data.amount===6000, ord);
-let noStep:any=await feeService.confirmMockPayment(P,ord.data.orderId,'UPI','fake'); check('payment without step-up refused', !noStep.ok && noStep.code==='STEP_UP_REQUIRED');
-let tok=await stepUp(s.data,'PAYMENT'); let paid:any=await feeService.confirmMockPayment(P,ord.data.orderId,'UPI',tok);
-check('payment recorded w/ receipt', paid.ok && paid.data.receiptNo && paid.data.isMock && paid.data.paidByGuardianId==='GRD-0001', paid);
-let replay:any=await feeService.confirmMockPayment(P,ord.data.orderId,'UPI',tok); check('order single-use', !replay.ok);
-ht=await hallTicketService.getForStudent(P); check('after pay: CLEARED but NOT available (no CT release)', ht.data[0].feeClearance==='CLEARED' && !ht.data[0].available, ht.data[0]);
-check('payment audited', auditService.list('GVS').some((a:any)=>a.action==='FEE_PAYMENT_RECORDED'));
+// Parents cannot pay in the app: the fee service has no order, checkout or payment call.
+for (const m of ['createOrder','confirmMockPayment','verifyPayment']) check('no parent payment method: '+m, typeof (feeService as any)[m] === 'undefined');
+// The school records the counter payment and issues the receipt (finance staff only).
+const { feeDeskService } = await import(u('services/feeDeskService.ts'));
+const FIN = { schoolId: 'GVS', role: 'ADMIN', userId: 'ACC-L-0002' } as any; // Finance admin
+let byParent:any=await feeDeskService.recordCashPayment(P,'GVS-2027-0001',6000,'x'); check('a parent cannot record a payment', !byParent.ok, byParent);
+let receiptsBefore:any=(await feeService.listPayments(P) as any).data.payments.length;
+let paid:any=await feeDeskService.recordCashPayment(FIN,'GVS-2027-0001',6000,'Counter slip 12');
+check('office cash recorded with a receipt (labelled demo in prototype mode)', paid.ok && paid.data.receiptNo && paid.data.isMock===true && paid.data.method==='CASH_AT_OFFICE' && paid.data.recordedByStaffId==='ACC-L-0002', paid);
+let after:any=await feeService.getSummary(P); check('balance updated', after.data.instalments[1].outstanding===0, after.data.instalments[1]);
+let myReceipts:any=await feeService.listPayments(P); check('parent sees the receipt', myReceipts.data.payments.length===receiptsBefore+1 && myReceipts.data.payments.some((x:any)=>x.receiptNo===paid.data.receiptNo), myReceipts.data);
+ht=await hallTicketService.getForStudent(P); check('after recording: CLEARED but NOT available (no CT release)', ht.data[0].feeClearance==='CLEARED' && !ht.data[0].available, ht.data[0]);
+check('collection audited', auditService.list('GVS').some((a:any)=>a.action==='FEE_CASH_RECORDED' || a.action==='FEE_PAYMENT_RECORDED'), auditService.list('GVS').map((a:any)=>a.action));
 
 // teacher sessions
 let tr:any=await authService.requestMobileOtp('9848022222','TEACHER_LOGIN'); let tv:any=await authService.verifyTeacherOtp(tr.data.challengeId,code(tr.data));

@@ -29,8 +29,18 @@ export interface ConsentView extends Omit<ConsentRequest, 'responses'> {
   expired: boolean;
 }
 
+/** A notice a teacher (or leadership) posts. Teachers: their assigned classes only, NORMAL or IMPORTANT. */
+export interface NewNotice {
+  audience: string[]; // classSectionIds; ['ALL'] only for Principal/Admin
+  title: string;
+  body: string;
+  priority: 'NORMAL' | 'IMPORTANT' | 'EMERGENCY';
+}
+
 export interface CommunicationService {
   getNotices(scope: Scope): Promise<Result<Notice[]>>;
+  /** Publishes a notice; parents of the audience classes see it immediately. Audited. */
+  postNotice(scope: Scope, req: NewNotice): Promise<Result<Notice>>;
   getRecipients(scope: Scope): Promise<Result<Recipient[]>>;
   getThreads(scope: Scope): Promise<Result<MessageThread[]>>;
   startThread(scope: Scope, req: { staffId: string; category: MessageCategory; subject: string; body: string }): Promise<Result<MessageThread>>;
@@ -52,6 +62,52 @@ class MockCommunicationService implements CommunicationService {
           const rank = { EMERGENCY: 0, IMPORTANT: 1, NORMAL: 2 } as const;
           return rank[a.priority] - rank[b.priority] || b.publishedAt.localeCompare(a.publishedAt);
         });
+    });
+  }
+
+  postNotice(scope: Scope, req: NewNotice) {
+    return guarded(() => {
+      const leadership = scope.role === 'PRINCIPAL' || scope.role === 'ADMIN';
+      if (scope.role !== 'TEACHER' && !leadership) throw new AccessDenied('Only staff can post notices.');
+      const db = getDb(scope.schoolId);
+      const audience = Array.from(new Set((req.audience ?? []).filter(Boolean)));
+      const toAll = audience.includes('ALL');
+      if (audience.length === 0) throw new RuleError('Choose at least one class.', 'AUDIENCE');
+      if (toAll && !leadership) throw new AccessDenied('Only the Principal or Admin can send a notice to the whole school.');
+      if (!toAll) {
+        // Teachers may post only to classes they are assigned to (Class Teacher or Subject Teacher).
+        const assigned = new Set(
+          db.classSections
+            .filter(c => c.classTeacherStaffId === scope.userId || c.subjectTeachers.some(t => t.staffId === scope.userId))
+            .map(c => c.id)
+        );
+        for (const id of audience) {
+          if (!db.classSections.some(c => c.id === id)) throw new RuleError('Class not found.', 'AUDIENCE');
+          if (!leadership && !assigned.has(id)) throw new AccessDenied('You can post notices only to your assigned classes.');
+        }
+      }
+      const priority = req.priority ?? 'NORMAL';
+      if (!['NORMAL', 'IMPORTANT', 'EMERGENCY'].includes(priority)) throw new RuleError('Choose normal or important.', 'PRIORITY');
+      if (priority === 'EMERGENCY' && !leadership) throw new AccessDenied('Only the Principal or Admin sends emergency notices.');
+      const title = (req.title ?? '').trim().slice(0, 200);
+      const body = (req.body ?? '').trim().slice(0, 2000);
+      if (title.length < 3 || body.length < 5) throw new RuleError('Add a title and the notice text.', 'EMPTY');
+      const notice: Notice = {
+        id: `NT-${scope.schoolId}-${Date.now().toString(36)}`,
+        schoolId: scope.schoolId,
+        audience: toAll ? 'ALL' : audience,
+        title,
+        body,
+        publishedAt: new Date().toISOString(),
+        priority
+      };
+      db.notices.push(notice);
+      saveDb(db);
+      auditService.record({
+        schoolId: scope.schoolId, action: 'NOTICE_PUBLISHED', actorId: scope.userId, actorRole: scope.role,
+        targetId: notice.id, details: `${priority}: "${title}" to ${toAll ? 'whole school' : audience.join(', ')}.`
+      });
+      return notice;
     });
   }
 

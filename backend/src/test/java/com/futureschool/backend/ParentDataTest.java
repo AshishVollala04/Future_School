@@ -84,56 +84,69 @@ class ParentDataTest {
         assertFalse(before.get("available").asBoolean());
         assertFalse(before.has("hallTicketNo"));
 
-        // Pay instalment 2 in full.
-        JsonNode order = api.post("/api/parent/fees/orders", Map.of("instalments", List.of(2)), aarav);
-        assertEquals(6000, order.get("amount").asLong(), order.toString());
-        JsonNode paid = api.post("/api/parent/fees/orders/" + order.get("orderId").asText() + "/confirm-mock",
-                Map.of("method", "UPI", "stepUpToken", stepUp(aarav, "PAYMENT")), aarav);
+        // The school records the instalment-2 cash at the counter (parents do not pay in the app).
+        String finance = api.staff("admin@greenwoodvalley.edu.in", "Greenwood@2026", "GVS");
+        JsonNode paid = api.post("/api/office/fees/cash", Map.of("studentId", "GVS-2027-0001", "amount", 6000, "note", "Counter slip 12"), finance);
         assertEquals(200, paid.get("_status").asInt(), paid.toString());
-        assertTrue(paid.get("isMock").asBoolean());
-        assertEquals("GRD-0002", paid.get("paidByGuardianId").asText());
+        assertEquals("CASH_AT_OFFICE", paid.get("method").asText());
+        assertFalse(paid.get("isMock").asBoolean(), "a recorded collection is real, never a demo payment");
 
         JsonNode after = ticketFor(aarav, "SA-1");
         assertEquals("CLEARED", after.get("feeClearance").asText(), "fees should now be cleared");
-        assertFalse(after.get("available").asBoolean(), "payment alone must never release a hall ticket");
+        assertFalse(after.get("available").asBoolean(), "recording a payment must never release a hall ticket");
     }
 
     @Test
-    void paymentNeedsAFreshPaymentOtpAndTheServerDecidesTheAmount() throws Exception {
-        String t = api.parent("9848011111", "GVS-2028-0117"); // Kavya
-        JsonNode order = api.post("/api/parent/fees/orders", Map.of("amount", 2000), t);
-        assertEquals(2000, order.get("amount").asLong());
-        // Oldest due first: instalment 1 school fee (3,000 left) gets the 2,000.
-        assertEquals("GVS-2028-0117-SF-1", order.get("allocations").get(0).get("chargeId").asText());
-        String url = "/api/parent/fees/orders/" + order.get("orderId").asText() + "/confirm-mock";
+    void parentsCannotPayOnlineAndStaffRecordedCashUpdatesDuesAndReceipts() throws Exception {
+        String kavya = api.parent("9848011111", "GVS-2028-0117");
+        // No payment-order, checkout or mock-payment endpoint exists for parents.
+        assertEquals(403, api.post("/api/parent/fees/orders", Map.of("amount", 2000), kavya).get("_status").asInt());
+        assertEquals(403, api.post("/api/parent/fees/orders/ORD-X/confirm-mock", Map.of("method", "UPI"), kavya).get("_status").asInt());
+        assertEquals(403, api.post("/api/parent/fees/orders/ORD-X/verify", Map.of("razorpayOrderId", "x"), kavya).get("_status").asInt());
+        int webhook = api.post("/api/payments/razorpay/webhook", Map.of("event", "payment.captured")).get("_status").asInt();
+        assertTrue(webhook == 401 || webhook == 403, "the online-payment webhook is gone: " + webhook);
 
-        assertEquals("STEP_UP_REQUIRED", api.post(url, Map.of("method", "UPI"), t).get("code").asText());
-        assertEquals("STEP_UP_REQUIRED", api.post(url, Map.of("method", "UPI", "stepUpToken", stepUp(t, "PICKUP_AUTHORIZATION")), t).get("code").asText());
-        assertEquals("BAD_METHOD", api.post(url, Map.of("method", "CASH_AT_OFFICE", "stepUpToken", stepUp(t, "PAYMENT")), t).get("code").asText());
+        JsonNode before = api.getJson("/api/parent/fees/summary", kavya);
+        int receiptsBefore = api.getJson("/api/parent/fees/payments", kavya).get("payments").size();
 
-        String token = stepUp(t, "PAYMENT");
-        assertEquals(200, api.post(url, Map.of("method", "CARD", "stepUpToken", token), t).get("_status").asInt());
-        // Order and OTP token are single-use.
-        assertEquals("NO_ORDER", api.post(url, Map.of("method", "CARD", "stepUpToken", stepUp(t, "PAYMENT")), t).get("code").asText());
-        JsonNode again = api.post("/api/parent/fees/orders", Map.of("amount", 1500), t);
-        assertEquals("STEP_UP_REQUIRED", api.post("/api/parent/fees/orders/" + again.get("orderId").asText() + "/confirm-mock",
-                Map.of("method", "UPI", "stepUpToken", token), t).get("code").asText());
+        // Only finance staff record a collection, and never more than is outstanding.
+        String finance = api.staff("admin@greenwoodvalley.edu.in", "Greenwood@2026", "GVS");
+        assertEquals(403, api.post("/api/office/fees/cash", Map.of("studentId", "GVS-2028-0117", "amount", 1000), kavya).get("_status").asInt());
+        assertEquals("BAD_AMOUNT", api.post("/api/office/fees/cash", Map.of("studentId", "GVS-2028-0117", "amount", 10_000_000), finance).get("code").asText());
+        JsonNode cash = api.post("/api/office/fees/cash", Map.of("studentId", "GVS-2028-0117", "amount", 2000, "note", "Slip 41"), finance);
+        assertEquals(200, cash.get("_status").asInt(), cash.toString());
+        // Oldest due first: instalment 1 school fee gets the 2,000.
+        assertEquals("GVS-2028-0117-SF-1", cash.get("allocations").get(0).get("chargeId").asText());
+        String receiptNo = cash.get("receiptNo").asText();
+        assertFalse(receiptNo.isBlank());
 
-        assertEquals("BAD_AMOUNT", api.post("/api/parent/fees/orders", Map.of("amount", 500), t).get("code").asText());
-        assertEquals("BAD_AMOUNT", api.post("/api/parent/fees/orders", Map.of("amount", 10_000_000), t).get("code").asText());
-        JsonNode list = api.getJson("/api/parent/fees/payments", t);
-        assertTrue(list.get("payments").size() >= 2);
+        JsonNode afterSummary = api.getJson("/api/parent/fees/summary", kavya);
+        assertEquals(before.get("totalPaid").asLong() + 2000, afterSummary.get("totalPaid").asLong());
+        assertEquals(before.get("totalOutstanding").asLong() - 2000, afterSummary.get("totalOutstanding").asLong());
+        JsonNode receipts = api.getJson("/api/parent/fees/payments", kavya).get("payments");
+        assertEquals(receiptsBefore + 1, receipts.size());
+        boolean found = false;
+        for (JsonNode r : receipts) found |= receiptNo.equals(r.get("receiptNo").asText());
+        assertTrue(found, "the parent sees the official receipt the office issued");
     }
 
     @Test
-    void anOrderBelongsToOneSessionAndOneChild() throws Exception {
+    void aParentSeesOnlyTheSessionChildsDuesAndReceipts() throws Exception {
+        String finance = api.staff("admin@greenwoodvalley.edu.in", "Greenwood@2026", "GVS");
+        String receiptNo = api.post("/api/office/fees/cash", Map.of("studentId", "GVS-2028-0117", "amount", 500, "note", "Slip 42"), finance)
+                .get("receiptNo").asText();
+        // Rajesh's session is for Aarav: Kavya's receipt is not in his list, whatever he asks for.
         String rajesh = api.parent("9876543210", "GVS-2027-0001");
-        JsonNode order = api.post("/api/parent/fees/orders", Map.of("amount", 1000), rajesh);
-        String url = "/api/parent/fees/orders/" + order.get("orderId").asText() + "/confirm-mock";
-        String meena = api.parent("9876543211", "GVS-2027-0001");
-        assertEquals("NO_ORDER", api.post(url, Map.of("method", "UPI", "stepUpToken", stepUp(meena, "PAYMENT")), meena).get("code").asText());
+        for (JsonNode r : api.getJson("/api/parent/fees/payments", rajesh).get("payments")) {
+            assertNotEquals(receiptNo, r.get("receiptNo").asText());
+            assertEquals("GVS-2027-0001", r.get("studentId").asText());
+        }
+        for (JsonNode ins : api.getJson("/api/parent/fees/summary", rajesh).get("instalments")) {
+            for (JsonNode line : ins.get("lines")) assertEquals("GVS-2027-0001", line.get("charge").get("studentId").asText());
+        }
+        // Another school's child: a different session, never this school's records.
         String rohan = api.parent("9876543210", "SJM-2033-0105");
-        assertEquals("NO_ORDER", api.post(url, Map.of("method", "UPI", "stepUpToken", stepUp(rohan, "PAYMENT")), rohan).get("code").asText());
+        for (JsonNode r : api.getJson("/api/parent/fees/payments", rohan).get("payments")) assertEquals("SJM-2033-0105", r.get("studentId").asText());
     }
 
     @Test

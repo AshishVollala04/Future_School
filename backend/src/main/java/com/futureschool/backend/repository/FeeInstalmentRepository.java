@@ -7,4 +7,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface FeeInstalmentRepository extends JpaRepository<FeeInstalment, String> {
     java.util.List<FeeInstalment> findAllByOrderByNumberAsc();
+
+    java.util.List<FeeInstalment> findByAcademicYearIdOrderByNumberAsc(String academicYearId);
+
+    java.util.List<FeeInstalment> findByAcademicYearIdIsNull();
 }

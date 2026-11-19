@@ -248,8 +248,12 @@ public class SchoolOperationsService {
             }
         }
 
-        List<FeeLine> allLines = activeStudents.stream().flatMap(s -> parentData.feeLines(s.getId(), today).stream()).toList();
-        List<FeeInstalment> terms = instalments.findAllByOrderByNumberAsc();
+        // Finance figures are for the current academic year only (a planned next year's charges are not counted yet).
+        String currentYearId = academicYears.findByIsCurrentTrue().map(AcademicYear::getId).orElse(null);
+        List<FeeLine> allLines = activeStudents.stream().flatMap(s -> parentData.feeLines(s.getId(), today).stream())
+                .filter(l -> com.futureschool.backend.roster.AcademicYearService.sameYear(l.charge().academicYearId(), currentYearId, currentYearId)).toList();
+        List<FeeInstalment> terms = instalments.findAllByOrderByNumberAsc().stream()
+                .filter(i -> com.futureschool.backend.roster.AcademicYearService.sameYear(i.getAcademicYearId(), currentYearId, currentYearId)).toList();
         List<Map<String, Object>> byInstalment = new ArrayList<>();
         for (FeeInstalment ins : terms) {
             List<FeeLine> ls = allLines.stream().filter(l -> l.charge().instalment() == ins.getNumber()).toList();
@@ -457,6 +461,12 @@ public class SchoolOperationsService {
                 Student created = studentService.createStudent(st, null);
                 createdCount++;
                 createdStudentIds.add(created.getId());
+                if (fee > 0) {
+                    String yearId = academicYears.findByIsCurrentTrue().map(AcademicYear::getId).orElse(null);
+                    if (StudentService.scheduleFor(instalments, yearId, yearId).isEmpty()) {
+                        errors.add(Map.of("row", rowNum, "message", "Added " + name + ", but no fee was charged: the fee schedule for the current year is not set up."));
+                    }
+                }
             } catch (Exception e) {
                 errors.add(Map.of("row", rowNum, "message", e.getMessage() != null ? e.getMessage() : "Invalid row"));
             }
@@ -528,7 +538,8 @@ public class SchoolOperationsService {
 
     // ================================================================== helpers
 
-    private UserAccount ensureParentAccount(String school, String mobile10, String name, String email, String address) {
+    /** The parent account for a mobile number (one per person, across schools), created when missing with an unusable password: parents sign in by OTP and set a PIN. Also ensures membership of this school. */
+    public UserAccount ensureParentAccount(String school, String mobile10, String name, String email, String address) {
         UserAccount acc = accounts.findByMobile(mobile10).stream()
                 .filter(a -> a.getRole() == UserRole.PARENT)
                 .findFirst()

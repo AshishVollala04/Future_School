@@ -13,7 +13,7 @@ import { academicsService } from '../../../services/academicsService';
 import { marksService } from '../../../services/marksService';
 import { EmptyState, ErrorState, LoadingBlock, Panel, Pill, Section } from '../../../components/common/States';
 import { ErrorBox, PrimaryButton, inputClass } from '../../auth/authUi';
-import { SheetGrid, STATUS_LABEL, STATUS_TONE } from './TeacherMarks';
+import { CorrectionsLink, SheetGrid, STATUS_LABEL, STATUS_TONE } from './TeacherMarks';
 import { ReportCardStatus } from '../../../types/domain';
 
 const CARD_TONE: Record<ReportCardStatus, 'neutral' | 'warning' | 'info' | 'danger' | 'success'> = {
@@ -88,10 +88,13 @@ export const TeacherClassResults: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-4xl xl:max-w-6xl">
-      <div>
-        <p className="text-sm font-semibold text-blue-800">My Class Teacher responsibility</p>
-        <h1 className="text-xl font-bold">{assessment.name} results · Class {ct.grade}-{ct.section}</h1>
-        <p className="text-sm text-slate-600">Accept every subject, generate report cards, send them to the Principal, then publish once all are approved.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-blue-800">My Class Teacher responsibility</p>
+          <h1 className="text-xl font-bold">{assessment.name} results · Class {ct.grade}-{ct.section}</h1>
+          <p className="text-sm text-slate-600">Accept every subject, generate report cards, send them to the Principal, then publish once all are approved.</p>
+        </div>
+        <CorrectionsLink />
       </div>
       <ErrorBox message={error} />
       {done && <p role="status" className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-900">{done}</p>}

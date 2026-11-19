@@ -3,8 +3,8 @@
  * Grid: type a number or "AB" (or just "a") for absent. Enter moves down. 0 means attended and scored zero.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, FileEdit } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
 import { marksService, SheetView } from '../../../services/marksService';
@@ -33,6 +33,16 @@ export const TeacherMarks: React.FC = () => {
   return sheetId ? <SheetEditor sheetId={sheetId} onBack={() => setParams({})} /> : <SheetList onOpen={id => setParams({ sheet: id })} />;
 };
 
+/** Shortcut to Result corrections: on a phone it is not in the menu, so it lives on the marks pages. */
+export const CorrectionsLink: React.FC = () => (
+  <Link
+    to="/teacher/corrections"
+    className="min-h-10 px-3.5 rounded-xl border border-blue-200 bg-white text-blue-800 text-sm font-semibold inline-flex items-center gap-1.5 hover:bg-blue-50 shrink-0"
+  >
+    <FileEdit className="w-4 h-4" /> Result corrections
+  </Link>
+);
+
 const SheetList: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
   const scope = useScope();
   const q = useQuery(() => marksService.listMySheets(scope), [scope.schoolId, scope.userId]);
@@ -40,10 +50,13 @@ const SheetList: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
   if (q.status === 'error') return <ErrorState message={q.error} onRetry={q.reload} />;
   return (
     <div className="space-y-4 max-w-3xl xl:max-w-6xl">
-      <div>
-        <p className="text-sm font-semibold text-blue-800">My Teaching</p>
-        <h1 className="text-xl font-bold">Marks entry</h1>
-        <p className="text-sm text-slate-600">Only your assigned class and subject for open assessments.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-blue-800">My Teaching</p>
+          <h1 className="text-xl font-bold">Marks entry</h1>
+          <p className="text-sm text-slate-600">Only your assigned class and subject for open assessments.</p>
+        </div>
+        <CorrectionsLink />
       </div>
       {q.data.length === 0 ? (
         <EmptyState title="No open assessments for your subjects" />

@@ -7,13 +7,13 @@
  */
 import type { Scope } from '../../hooks/useScope';
 import { Result } from '../../types/session';
-import { FeeSummary, HallTicketStatus, Payment, PaymentOrder, PublishedResult, Refund } from '../../types/domain';
+import { FeeSummary, HallTicketStatus, Payment, PublishedResult, Refund } from '../../types/domain';
 import type { FeeService } from '../feeService';
 import type { AcademicsService, AttendanceSummary } from '../academicsService';
 import type { HallTicketService } from '../hallTicketService';
 import { api } from './http';
 
-const parentOnly = <T,>(): Result<T> => ({ ok: false, error: 'Online payment is made by the parent.', code: 'FORBIDDEN' });
+const parentOnly = <T,>(): Result<T> => ({ ok: false, error: "Only a parent can view their child's fees here.", code: 'FORBIDDEN' });
 
 export class ApiFeeService implements FeeService {
   getSummary(scope: Scope) {
@@ -26,27 +26,7 @@ export class ApiFeeService implements FeeService {
       : Promise.resolve(parentOnly<{ payments: Payment[]; refunds: Refund[] }>());
   }
 
-  createOrder(scope: Scope, req: { instalments?: number[]; amount?: number; stepUpToken?: string }) {
-    if (scope.role !== 'PARENT') return Promise.resolve(parentOnly<PaymentOrder>());
-    const payload = req.instalments?.length
-      ? { instalments: req.instalments, ...(req.stepUpToken ? { stepUpToken: req.stepUpToken } : {}) }
-      : { amount: req.amount, ...(req.stepUpToken ? { stepUpToken: req.stepUpToken } : {}) };
-    return api.post<PaymentOrder>('/api/parent/fees/orders', payload);
-  }
 
-  confirmMockPayment(scope: Scope, orderId: string, method: Payment['method'], stepUpToken: string) {
-    if (scope.role !== 'PARENT') return Promise.resolve(parentOnly<Payment>());
-    return api.post<Payment>(`/api/parent/fees/orders/${encodeURIComponent(orderId)}/confirm-mock`, { method, stepUpToken });
-  }
-
-  verifyPayment(
-    scope: Scope,
-    orderId: string,
-    req: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string; method: Payment['method']; stepUpToken?: string }
-  ) {
-    if (scope.role !== 'PARENT') return Promise.resolve(parentOnly<Payment>());
-    return api.post<Payment>(`/api/parent/fees/orders/${encodeURIComponent(orderId)}/verify`, req);
-  }
 }
 
 /** Parent attendance + results from the server; everything else from the given fallback. */

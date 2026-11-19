@@ -59,18 +59,15 @@ public class AdministrationController {
     }
 
     // --- Student Promotion ---
+    /**
+     * Retired: it moved students in place (no year history, roll number, review, permission check or audit).
+     * Promotion now goes through the academic-year roster (/api/admin/roster/years/{yearId}/preview|apply|start).
+     */
     @PostMapping("/students/promote")
-    @Operation(summary = "Promote a batch of students to the next class")
-    public ResponseEntity<?> promoteStudents(@RequestBody Map<String, Object> body) {
-        try {
-            String fromClassId = (String) body.get("fromClassId");
-            String toClassId = (String) body.get("toClassId");
-            List<String> studentIds = (List<String>) body.get("studentIds");
-            int promotedCount = administrationService.promoteStudents(fromClassId, toClassId, studentIds);
-            return ResponseEntity.ok(Map.of("success", true, "message", promotedCount + " students promoted successfully"));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    @Operation(summary = "Retired: use the academic-year roster (/api/admin/roster)")
+    public ResponseEntity<?> promoteStudents(@RequestBody(required = false) Map<String, Object> body) {
+        return ResponseEntity.status(410).body(Map.of("success", false, "code", "RETIRED",
+                "error", "Promote students through the academic-year roster: prepare the next year, review the plan, then start the year."));
     }
 
     // --- Certificates ---

@@ -117,6 +117,8 @@ export interface FeeCharge {
   label: string;
   amount: number;
   dueOn: ISODate;
+  /** Academic year the charge belongs to (server); absent in the prototype mock. */
+  academicYearId?: string | null;
 }
 
 export interface FeeConcession {
@@ -168,7 +170,8 @@ export interface FeeLine {
 }
 
 export interface FeeSummary {
-  instalments: (Instalment & { lines: FeeLine[]; outstanding: number; overdue: boolean })[];
+  /** One entry per instalment per academic year; academicYear is the label, e.g. "2027-28". */
+  instalments: (Instalment & { lines: FeeLine[]; outstanding: number; overdue: boolean; academicYearId?: string | null; academicYear?: string | null })[];
   totalCharged: number;
   totalConcession: number;
   totalPaid: number;

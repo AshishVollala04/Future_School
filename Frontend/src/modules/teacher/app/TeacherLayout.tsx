@@ -9,7 +9,8 @@
  */
 import React, { useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { BookOpenCheck, CalendarCheck, CalendarOff, ClipboardList, FileCheck2, FileEdit, Home, KeyRound, MessageSquare, NotebookPen, ShieldCheck, UserCheck } from 'lucide-react';
+import { BookOpenCheck, CalendarCheck, CalendarOff, ClipboardList, FileCheck2, FileEdit, Home, KeyRound, Megaphone, MessageSquare, NotebookPen, ShieldCheck, UserCheck } from 'lucide-react';
+import { TeacherBell } from './TeacherBell';
 import { StaffShell, StaffNavGroup, StaffNavItem } from '../../../components/layout/StaffShell';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
@@ -58,6 +59,7 @@ const TeacherPortal: React.FC = () => {
         { to: '/teacher/marks', label: 'Marks entry', icon: NotebookPen },
         { to: '/teacher/homework', label: 'Homework', icon: BookOpenCheck },
         { to: '/teacher/messages', label: 'Messages from parents', icon: MessageSquare },
+        { to: '/teacher/notices', label: 'Notices', icon: Megaphone },
         { to: '/teacher/corrections', label: 'Result corrections', icon: FileEdit },
         { to: '/teacher/my-leave', label: 'My leave', icon: CalendarOff },
         { to: '/teacher/pin', label: 'Sign-in PIN', icon: KeyRound }
@@ -81,5 +83,27 @@ const TeacherPortal: React.FC = () => {
     { to: '/teacher/marks', label: 'Marks', icon: NotebookPen },
     ...(ct ? [{ to: '/teacher/class-results', label: 'Results', icon: FileCheck2 }] : [])
   ];
-  return <StaffShell groups={groups} bottom={bottom} roleLabel={ct ? `Class Teacher ${ct.grade}-${ct.section}` : 'Subject Teacher'} />;
+  // Mobile drawer: only what the bottom bar, the Today cards and the in-page links don't already reach.
+  // (Marks, attendance, results: bottom bar. Homework, messages, leave requests, hall tickets: Today cards.
+  //  Result corrections: a link inside Marks entry and Marks review.) No section title.
+  const drawerGroups: StaffNavGroup[] = [
+    {
+      title: '',
+      items: [
+        { to: '/teacher/notices', label: 'Notices', icon: Megaphone },
+        { to: '/teacher/my-leave', label: 'My leave', icon: CalendarOff },
+        { to: '/teacher/pin', label: 'Sign-in PIN', icon: KeyRound }
+      ]
+    }
+  ];
+  return (
+    <StaffShell
+      groups={groups}
+      bottom={bottom}
+      drawerGroups={drawerGroups}
+      showMoreInBottomNav={false}
+      headerExtra={<TeacherBell />}
+      roleLabel={ct ? `Class Teacher ${ct.grade}-${ct.section}` : 'Subject Teacher'}
+    />
+  );
 };

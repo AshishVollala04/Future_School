@@ -131,33 +131,31 @@ class ParentPinTest {
 
     @Test
     @Order(5)
-    void aParentConfirmsAPaymentWithThePinNoSms() throws Exception {
+    void aParentConfirmsAPickupPassWithThePinNoSms() throws Exception {
         String s = session(pinLogin(device, Api.DEMO_PIN), null, false).get("accessToken").asText();
         long sms = challenges.count();
-        JsonNode order = api.post("/api/parent/fees/orders", Map.of("amount", 1000), s);
-        String url = "/api/parent/fees/orders/" + order.get("orderId").asText() + "/confirm-mock";
 
-        assertEquals("PIN_INVALID", api.post("/api/auth/step-up/pin", Map.of("purpose", "PAYMENT", "pin", "1357"), s).get("code").asText());
+        assertEquals("PIN_INVALID", api.post("/api/auth/step-up/pin", Map.of("purpose", "PICKUP_AUTHORIZATION", "pin", "1357"), s).get("code").asText());
         assertEquals("OTP_REQUIRED", api.post("/api/auth/step-up/pin", Map.of("purpose", "SENSITIVE_STAFF_ACTION", "pin", Api.DEMO_PIN), s).get("code").asText(),
-                "only payments and pickup passes can use the PIN");
+                "staff actions cannot use the parent PIN");
         assertEquals("OTP_REQUIRED", api.post("/api/auth/step-up/pin", Map.of("purpose", "PIN_CHANGE", "pin", Api.DEMO_PIN), s).get("code").asText(),
                 "changing the PIN still needs an SMS code");
 
-        JsonNode t = api.post("/api/auth/step-up/pin", Map.of("purpose", "PAYMENT", "pin", Api.DEMO_PIN), s);
+        // Start from no active passes (other tests share the database), so the 2-active-passes limit cannot interfere.
+        for (JsonNode existing : api.getJson("/api/parent/pickup", s).get("passes")) {
+            if ("ACTIVE".equals(existing.get("status").asText())) api.post("/api/parent/pickup/passes/" + existing.get("id").asText() + "/cancel", Map.of(), s);
+        }
+        JsonNode t = api.post("/api/auth/step-up/pin", Map.of("purpose", "PICKUP_AUTHORIZATION", "pin", Api.DEMO_PIN), s);
         assertEquals(200, t.get("_status").asInt(), t.toString());
-        JsonNode paid = api.post(url, Map.of("method", "UPI", "stepUpToken", t.get("stepUpToken").asText()), s);
-        assertEquals(200, paid.get("_status").asInt(), paid.toString());
-        JsonNode again = api.post("/api/parent/fees/orders", Map.of("amount", 1000), s);
-        assertTrue(again.has("orderId"), again.toString());
-        assertEquals("STEP_UP_REQUIRED", api.post("/api/parent/fees/orders/" + again.get("orderId").asText() + "/confirm-mock",
-                Map.of("method", "UPI", "stepUpToken", t.get("stepUpToken").asText()), s).get("code").asText(), "the token is single use");
-        assertEquals(sms, challenges.count(), "no SMS was sent for the payment");
+        Map<String, Object> pass = Map.of("personName", "Suresh Kumar", "relation", "Uncle", "mobile", "9876500011",
+                "reason", "Picking up after the science fair", "stepUpToken", t.get("stepUpToken").asText());
+        JsonNode issued = api.post("/api/parent/pickup/passes", pass, s);
+        assertEquals(200, issued.get("_status").asInt(), issued.toString());
+        assertEquals("STEP_UP_REQUIRED", api.post("/api/parent/pickup/passes", pass, s).get("code").asText(), "the token is single use");
+        assertEquals(sms, challenges.count(), "no SMS was sent for the confirmation");
 
-        // A pickup token is not a payment token, and teachers cannot use this.
-        String pickup = api.post("/api/auth/step-up/pin", Map.of("purpose", "PICKUP_AUTHORIZATION", "pin", Api.DEMO_PIN), s).get("stepUpToken").asText();
-        JsonNode order2 = api.post("/api/parent/fees/orders", Map.of("amount", 1000), s);
-        assertEquals("STEP_UP_REQUIRED", api.post("/api/parent/fees/orders/" + order2.get("orderId").asText() + "/confirm-mock",
-                Map.of("method", "UPI", "stepUpToken", pickup), s).get("code").asText());
-        assertEquals(403, api.post("/api/auth/step-up/pin", Map.of("purpose", "PAYMENT", "pin", Api.DEMO_PIN), api.teacher("9848012345", "GVS")).get("_status").asInt());
+        // There is no in-app payment to confirm, and teachers cannot use the parent PIN step-up.
+        assertEquals(403, api.post("/api/parent/fees/orders", Map.of("amount", 1000), s).get("_status").asInt());
+        assertEquals(403, api.post("/api/auth/step-up/pin", Map.of("purpose", "PICKUP_AUTHORIZATION", "pin", Api.DEMO_PIN), api.teacher("9848012345", "GVS")).get("_status").asInt());
     }
 }

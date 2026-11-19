@@ -6,7 +6,7 @@
  * their own governed changes. Those links simply do not exist here.
  */
 import React from 'react';
-import { Bus, ClipboardList, LayoutDashboard, MessageCircle, DoorOpen, FileClock, Home, MessageSquareWarning, ReceiptIndianRupee, ShieldCheck, UserCog, Users } from 'lucide-react';
+import { Bus, CalendarPlus, ClipboardList, LayoutDashboard, MessageCircle, DoorOpen, FileClock, Home, MessageSquareWarning, ReceiptIndianRupee, ShieldCheck, UserCog, Users } from 'lucide-react';
 import { StaffShell, StaffNavGroup, StaffNavItem } from '../../../components/layout/StaffShell';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
@@ -38,6 +38,7 @@ export const AdminLayout: React.FC = () => {
   if (can('FINANCE')) groups.push({ title: 'Finance', items: [{ to: '/admin/fees', label: 'Fee desk', icon: ReceiptIndianRupee }] });
   const ops: StaffNavItem[] = [
     ...(can('ADMISSIONS') || can('ACADEMIC_OPS') ? [{ to: '/admin/students', label: 'Students & onboarding', icon: Users }] : []),
+    ...(can('ADMISSIONS') || can('FINANCE') ? [{ to: '/admin/academic-year', label: 'New academic year', icon: CalendarPlus }] : []),
     ...(can('ACADEMIC_OPS') ? [{ to: '/admin/substitution', label: 'Substitution', icon: UserCog, badge: q?.substitutionsUncovered }] : []),
     ...(can('TRANSPORT') ? [{ to: '/admin/transport', label: 'Transport', icon: Bus, badge: q?.transportPending }] : []),
     ...(can('COMPLAINTS') ? [{ to: '/admin/complaints', label: 'Complaints', icon: MessageSquareWarning, badge: q?.complaintsOpen }] : []),

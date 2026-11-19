@@ -143,10 +143,11 @@ class TeachingFlowTest {
         assertEquals("ALREADY_RELEASED", api.post("/api/staff/hall-tickets/release", Map.of("examId", "EX-GVS-SA1", "studentId", "GVS-2027-0002"), s).get("code").asText());
         assertEquals(403, api.post("/api/staff/hall-tickets/release", Map.of("examId", "EX-GVS-SA1", "studentId", "GVS-2027-0005"), nair()).get("_status").asInt());
 
-        // Flow 3 on the backend: parent pays -> fees cleared but NOT released -> Class Teacher releases -> available.
+        // Flow 3 on the backend: office records the fee -> cleared but NOT released -> Class Teacher releases -> available.
         String parent = api.parent("9876543210", "GVS-2027-0001");
-        JsonNode order = api.post("/api/parent/fees/orders", Map.of("instalments", List.of(2)), parent);
-        api.post("/api/parent/fees/orders/" + order.get("orderId").asText() + "/confirm-mock", Map.of("method", "UPI", "stepUpToken", stepUp(parent, "PAYMENT")), parent);
+        String finance = api.staff("admin@greenwoodvalley.edu.in", "Greenwood@2026", "GVS");
+        JsonNode cash = api.post("/api/office/fees/cash", Map.of("studentId", "GVS-2027-0001", "amount", 6000, "note", "Counter"), finance);
+        assertEquals(200, cash.get("_status").asInt(), cash.toString());
         JsonNode before = api.getJson("/api/parent/hall-tickets", parent).get(0);
         assertEquals("CLEARED", before.get("feeClearance").asText());
         assertFalse(before.get("available").asBoolean());

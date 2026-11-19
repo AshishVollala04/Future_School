@@ -52,34 +52,9 @@ public class ParentAppController {
         return run(auth, data::listPayments);
     }
 
-    @PostMapping("/fees/orders")
-    @Operation(summary = "Create a payment order (mock or Razorpay) with server-computed amount and allocation")
-    public ResponseEntity<?> createOrder(Authentication auth, @RequestBody Map<String, Object> body) {
-        @SuppressWarnings("unchecked")
-        List<Integer> ins = body.get("instalments") instanceof List<?> l ? (List<Integer>) l : null;
-        Long amount = body.get("amount") instanceof Number n ? n.longValue() : null;
-        String stepUpToken = body.get("stepUpToken") instanceof String s ? s : null;
-        return run(auth, p -> data.createOrder(p, ins, amount, stepUpToken));
-    }
-
-    @PostMapping("/fees/orders/{orderId}/verify")
-    @Operation(summary = "Verify Razorpay Checkout payment signature (HMAC-SHA256) and record payment")
-    public ResponseEntity<?> verify(Authentication auth, @PathVariable String orderId, @RequestBody Map<String, String> body) {
-        return run(auth, p -> data.verifyPayment(
-                p,
-                orderId,
-                body.get("razorpayOrderId"),
-                body.get("razorpayPaymentId"),
-                body.get("razorpaySignature"),
-                body.get("method"),
-                body.get("stepUpToken")));
-    }
-
-    @PostMapping("/fees/orders/{orderId}/confirm-mock")
-    @Operation(summary = "PROTOTYPE: mock provider confirmation. Requires a fresh PAYMENT step-up token")
-    public ResponseEntity<?> confirm(Authentication auth, @PathVariable String orderId, @RequestBody Map<String, String> body) {
-        return run(auth, p -> data.confirmMockPayment(p, orderId, body.get("method"), body.get("stepUpToken")));
-    }
+    // Parents do not pay in the app: there are no payment-order, checkout or mock-payment endpoints.
+    // Fees are collected at the school counter and recorded by finance staff (/api/office/fees/cash),
+    // who issue the official receipt; parents see dues and receipts above.
 
     @GetMapping("/attendance")
     public ResponseEntity<?> attendance(Authentication auth, @RequestParam(defaultValue = "30") int days) {

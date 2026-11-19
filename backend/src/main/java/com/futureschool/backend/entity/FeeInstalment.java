@@ -25,4 +25,8 @@ public class FeeInstalment extends TenantScopedEntity {
 
     @Column(name = "due_on", nullable = false, length = 10)
     private String dueOn;
+
+    /** The academic year this schedule belongs to. Null only on rows created before V13 (read as the current year). */
+    @Column(name = "academic_year_id", length = 64)
+    private String academicYearId;
 }

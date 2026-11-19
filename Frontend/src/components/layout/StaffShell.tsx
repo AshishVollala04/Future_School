@@ -26,7 +26,21 @@ export interface StaffNavGroup {
   items: StaffNavItem[];
 }
 
-export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavItem[]; roleLabel: string }> = ({ groups, bottom, roleLabel }) => {
+export interface StaffShellProps {
+  /** Desktop sidebar (and the mobile drawer unless `drawerGroups` is given). */
+  groups: StaffNavGroup[];
+  /** Mobile bottom bar. */
+  bottom: StaffNavItem[];
+  roleLabel: string;
+  /** Mobile drawer only, e.g. the items not already reachable from the bottom bar or home cards. */
+  drawerGroups?: StaffNavGroup[];
+  /** Show the "More" button in the mobile bottom bar (default true). The top-left menu button stays either way. */
+  showMoreInBottomNav?: boolean;
+  /** Extra header controls shown beside the language toggle (e.g. the teacher's alerts bell). */
+  headerExtra?: React.ReactNode;
+}
+
+export const StaffShell: React.FC<StaffShellProps> = ({ groups, bottom, roleLabel, drawerGroups, showMoreInBottomNav = true, headerExtra }) => {
   const { t } = useTranslation();
   const { session, currentUser, logout } = useAuth();
   const { state: tenant, school, boardProfile } = useTenant();
@@ -41,11 +55,11 @@ export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavIte
     navigate('/login', { replace: true });
   };
 
-  const nav = (onPick?: () => void) => (
+  const nav = (list: StaffNavGroup[], onPick?: () => void) => (
     <nav className="space-y-5">
-      {groups.map(g => (
-        <div key={g.title}>
-          <h3 className="px-3 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{g.title}</h3>
+      {list.map((g, gi) => (
+        <div key={g.title || `group-${gi}`}>
+          {g.title && <h3 className="px-3 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{g.title}</h3>}
           <ul className="space-y-0.5">
             {g.items.map(i => (
               <li key={i.to}>
@@ -89,6 +103,7 @@ export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavIte
               {school && ` · ${boardProfile ? `${boardProfile.shortName} · ` : ''}AY ${school.academicYear.label}`}
             </p>
           </div>
+          {headerExtra}
           <LanguageToggle onDark />
           <button onClick={() => setConfirmSignOut(true)} className="hidden sm:flex min-h-10 px-3 rounded-full items-center gap-1.5 text-sm font-semibold text-white/90 hover:bg-white/15" aria-label={t('staff.signOut')}>
             <LogOut className="w-4 h-4" /> {t('staff.signOut')}
@@ -97,7 +112,7 @@ export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavIte
       </header>
 
       <div className="flex max-w-[1400px] mx-auto">
-        <aside className="hidden lg:block w-64 shrink-0 border-r border-slate-200 bg-white min-h-[calc(100dvh-4rem)] p-3">{nav()}</aside>
+        <aside className="hidden lg:block w-64 shrink-0 border-r border-slate-200 bg-white min-h-[calc(100dvh-4rem)] p-3">{nav(groups)}</aside>
         <main className="flex-1 min-w-0 p-4 sm:p-6 pb-28 lg:pb-8" key={`${session?.role}:${session?.schoolId}`}>
           {tenant.status === 'loading' ? <LoadingBlock /> : tenant.status === 'error' ? <ErrorState message={tenant.error} /> : (
             <div key={location.pathname} className="fs-rise"><Outlet /></div>
@@ -105,16 +120,18 @@ export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavIte
         </main>
       </div>
 
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 grid pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${bottom.length + 1}, minmax(0, 1fr))` }}>
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 grid pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${bottom.length + (showMoreInBottomNav ? 1 : 0)}, minmax(0, 1fr))` }}>
         {bottom.map(i => (
           <NavLink key={i.to} to={i.to} className={({ isActive }) => `min-h-16 flex flex-col items-center justify-center gap-1 text-xs font-semibold ${isActive ? 'text-blue-800' : 'text-slate-500'}`}>
             <i.icon className="w-5 h-5" />
             <span className="truncate max-w-full px-1">{i.label}</span>
           </NavLink>
         ))}
-        <button onClick={() => setDrawer(true)} className="min-h-16 flex flex-col items-center justify-center gap-1 text-xs font-semibold text-slate-500">
-          <Menu className="w-5 h-5" /> {t('staff.more')}
-        </button>
+        {showMoreInBottomNav && (
+          <button onClick={() => setDrawer(true)} className="min-h-16 flex flex-col items-center justify-center gap-1 text-xs font-semibold text-slate-500">
+            <Menu className="w-5 h-5" /> {t('staff.more')}
+          </button>
+        )}
       </nav>
 
       {/* Mobile menu: always mounted so it can slide in and out; `inert` keeps it unreachable while closed. */}
@@ -132,7 +149,7 @@ export const StaffShell: React.FC<{ groups: StaffNavGroup[]; bottom: StaffNavIte
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="flex-1">{nav(() => setDrawer(false))}</div>
+          <div className="flex-1">{nav(drawerGroups ?? groups, () => setDrawer(false))}</div>
           <button onClick={() => setConfirmSignOut(true)} className="mt-4 min-h-12 rounded-xl border border-rose-200 text-rose-700 font-semibold flex items-center justify-center gap-2">
             <LogOut className="w-4 h-4" /> {t('staff.signOut')}
           </button>

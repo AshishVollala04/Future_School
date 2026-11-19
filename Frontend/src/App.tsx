@@ -93,6 +93,7 @@ const TeacherMyLeave = React.lazy(() => import('./modules/teacher/app/TeacherMyL
 const TeacherSignInPin = React.lazy(() => import('./modules/teacher/app/TeacherSignInPin').then(m => ({ default: m.TeacherSignInPin })));
 const TeacherMessages = React.lazy(() => import('./modules/teacher/app/TeacherMessagesAndHomework').then(m => ({ default: m.TeacherMessages })));
 const TeacherHomework = React.lazy(() => import('./modules/teacher/app/TeacherMessagesAndHomework').then(m => ({ default: m.TeacherHomework })));
+const TeacherNotices = React.lazy(() => import('./modules/teacher/app/TeacherNotices').then(m => ({ default: m.TeacherNotices })));
 const TeacherHallTicketRelease = React.lazy(() => import('./modules/teacher/TeacherHallTicketRelease').then(m => ({ default: m.TeacherHallTicketRelease })));
 
 // === LAZY: Principal Modules ===
@@ -119,6 +120,7 @@ const OwnerDashboard = React.lazy(() => import('./modules/owner/OwnerDashboard')
 const AdminAlerts = React.lazy(() => import('./modules/admin/app/AdminAlerts').then(m => ({ default: m.AdminAlerts })));
 const AdminUdiseExport = React.lazy(() => import('./modules/admin/app/AdminUdiseExport').then(m => ({ default: m.AdminUdiseExport })));
 const AdminStudents = React.lazy(() => import('./modules/admin/app/AdminStudents').then(m => ({ default: m.AdminStudents })));
+const AdminAcademicYear = React.lazy(() => import('./modules/admin/app/AdminAcademicYear').then(m => ({ default: m.AdminAcademicYear })));
 const AdminGateCheck = React.lazy(() => import('./modules/admin/app/AdminGateCheck').then(m => ({ default: m.AdminGateCheck })));
 
 // === LAZY: Platform Admin Modules ===
@@ -251,6 +253,7 @@ export default function App() {
                 <Route path="pin" element={<TeacherSignInPin />} />
                 <Route path="messages" element={<TeacherMessages />} />
                 <Route path="homework" element={<TeacherHomework />} />
+                <Route path="notices" element={<TeacherNotices />} />
                 <Route path="*" element={<Navigate to="/teacher/today" replace />} />
               </Route>
 
@@ -302,6 +305,7 @@ export default function App() {
                 <Route path="alerts" element={<AdminAlerts />} />
                 <Route path="udise" element={<AdminUdiseExport />} />
                 <Route path="students" element={<AdminStudents />} />
+                <Route path="academic-year" element={<AdminAcademicYear />} />
                 <Route path="*" element={<Navigate to="/admin/home" replace />} />
               </Route>
 
