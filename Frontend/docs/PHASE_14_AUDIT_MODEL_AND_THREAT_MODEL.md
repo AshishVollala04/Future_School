@@ -1,5 +1,7 @@
 # Phase 14: FutureSchool Production Audit Model & Threat Model
 
+> **Superseded on payments:** this phase document predates the current fee policy. parents do not pay in the app; fees are paid at the school counter or by the school's direct bank QR and recorded by finance staff in the Fee Desk, which issues the receipt (PRD Module 4). Online gateway payments (Razorpay / UPI checkout, payment orders, webhooks) are out of scope / deferred, and the backend denies those endpoints. Payment-order, checkout and webhook designs below are historical only.
+
 **Product:** FutureSchool — Commercial Multi-School Management SaaS Platform  
 **Target Architecture:** Java 21 LTS · Spring Boot 3.5.x · Spring Security 6 · PostgreSQL 16 RLS · Redis 7 · AWS S3 / GCP Cloud Storage
 **Document Classification:** Production Security Specification & STRIDE Threat Model (Phase 14)  

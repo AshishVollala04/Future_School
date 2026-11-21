@@ -658,6 +658,14 @@
       "mostOverdue": "Most overdue by class",
       "noOverdue": "No overdue fees.",
       "classRow": "Class {{label}} · {{count}} student(s)"
+    },
+    "quick": {
+      "pending": "{{count}} pending",
+      "nothing": "Nothing pending",
+      "academicStatus": "{{published}}/{{total}} classes published",
+      "searchClass": "Search class or teacher",
+      "noMatch": "No class matches",
+      "hallStatus": "{{exam}}: {{released}}/{{total}} released"
     }
   }
 }

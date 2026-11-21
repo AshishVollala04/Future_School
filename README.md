@@ -24,7 +24,7 @@ FutureSchool/
 - 📱 **Parent App** — 1-tap MPIN login, live attendance, homework, fee payments, SCERT report cards
 - 👩‍🏫 **Teacher App** — Attendance, marks entry, homework, communication
 - 🏫 **Principal Dashboard** — School analytics, UDISE+ export, staff management
-- 💰 **Fee Management** — Term 1-4 fees, Razorpay UPI payments, instant receipts
+- 💰 **Fee Management** — Term 1-4 fees per academic year, paid at the school counter and recorded by the fee office with official receipts (no in-app payment)
 - 🌐 **Multi-tenant** — Supports multiple schools on one platform
 - 🔐 **Secure Auth** — OTP + MPIN + Microsoft/Google SSO
 

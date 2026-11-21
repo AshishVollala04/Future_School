@@ -125,10 +125,16 @@ class MockPickupService implements PickupService {
 
   verifyAtGate(scope: Scope, code: string) {
     return guarded(() => {
-      if (scope.role === 'PARENT') throw new AccessDenied('Only school staff check pickup passes.');
+      if (scope.role !== 'TEACHER') throw new AccessDenied("Pickup passes are checked by the child's Class Teacher.");
       const list = this.all(scope.schoolId);
       const p = list.find(x => x.codeHash === fingerprint(code.trim().toUpperCase()));
       if (!p) throw new RuleError('No pass with this code.', 'INVALID');
+      const db = getDb(scope.schoolId);
+      const child = db.students.find(x => x.id === p.studentId);
+      const cls = child ? db.classSections.find(c => c.id === child.classSectionId) : undefined;
+      if (!cls || cls.classTeacherStaffId !== scope.userId) {
+        throw new AccessDenied("This pass is for a child in another class. Ask that child's Class Teacher to check it.");
+      }
       if (p.status === 'USED') throw new RuleError(`This pass was already used at ${p.usedAt}.`, 'USED');
       if (p.status !== 'ACTIVE') throw new RuleError('This pass was cancelled by the parent.', 'CANCELLED');
       if (Date.now() > p.validUntil) throw new RuleError('This pass has expired.', 'EXPIRED');

@@ -36,7 +36,7 @@ flowchart LR
 | `MultiSchoolIsolationTest.java` | Confirms school A can never query or mutate school B records. |
 | `SignInFlowTest.java` | Full OTP $\rightarrow$ MPIN setup $\rightarrow$ Trusted Device token issuance. |
 | `ParentPinTest.java` | Verifies 3-strike brute force lockout and BCrypt work factor 12. |
-| `RazorpayFlowTest.java` | Order creation, HMAC-SHA256 webhook validation, ledger balance update. |
+| `ParentDataTest.java` | Parents cannot create payment orders (403); staff-recorded counter cash updates balances and issues a receipt the parent can see. |
 | `TeachingFlowTest.java` | Daily attendance submission and period-wise register management. |
 | `BoardProfileTest.java` | Telangana SCERT General Science composite marks calculation (Phy 50 + Bio 50). |
 | `AlertFlowTest.java` | 10-minute hold-off queue and cancellation on attendance correction. |
@@ -160,7 +160,7 @@ Execute these 5 critical tests immediately following any production release:
 1. **Health Check:** `curl -I https://api.futureschool.in/actuator/health` $\rightarrow$ Expect `200 OK`.
 2. **Parent Login Flow:** Log in via test parent mobile + real SMS OTP $\rightarrow$ Set MPIN $\rightarrow$ Unlock dashboard.
 3. **Report Card Rendering:** Verify Class 8 General Science renders Physical Science (50) and Biology (50) correctly.
-4. **Fee Payment Webhook:** Initiate test ₹1.00 UPI payment via Razorpay $\rightarrow$ Verify instant receipt generation.
+4. **Fee Counter Collection:** Record a test collection in the Admin Fee Desk $\rightarrow$ verify the receipt number and the parent's updated balance and receipt history. (Online gateway payments are out of scope; there is no webhook to test.)
 5. **Attendance Alert Buffer:** Mark test student absent $\rightarrow$ Verify alert stays in `HOLDING` status for 10 minutes.
 
 ---

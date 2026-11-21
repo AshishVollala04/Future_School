@@ -32,7 +32,7 @@ graph TB
     end
 
     subgraph External Gateways
-        Razorpay["Razorpay UPI & Payments Gateway"]
+        Razorpay["Razorpay payments gateway (deferred / out of scope: fees are paid at the school counter)"]
         MetaCloud["Meta WhatsApp Cloud API (Graph v21.0)"]
         DLTSMS["TRAI DLT SMS Gateway (MSG91 / HTTP)"]
         IDP["Azure AD & Google Identity Services"]
@@ -45,7 +45,7 @@ graph TB
     SecurityConfig --> TenantFilter
     TenantFilter --> Postgres
     Flyway -.->|Runs on Boot| Postgres
-    SpringBoot --> Razorpay
+    SpringBoot -.-> Razorpay
     SpringBoot --> MetaCloud
     SpringBoot --> DLTSMS
     SpringBoot --> IDP

@@ -1,9 +1,11 @@
 /** Admin work queue: what is waiting on this Admin, by permission. Operational numbers only. */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Bus, CalendarPlus, UserCog, ChevronRight, ClipboardList, MessageSquareWarning, ReceiptIndianRupee, Users } from 'lucide-react';
+import { QuickCard } from '../../../components/common/HomeCards';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
+import { useReloadOnDataChange } from '../../../hooks/useReloadOnDataChange';
 import { adminService } from '../../../services/adminService';
 import { staffService } from '../../../services/staffService';
 import { EmptyState, ErrorState, LoadingBlock, Panel, Pill, Section } from '../../../components/common/States';
@@ -23,6 +25,7 @@ export const AdminHome: React.FC = () => {
   const q = useQuery(() => adminService.getWorkQueue(scope), [scope.schoolId, scope.userId]);
   const can = (p: string) => (access.data?.permissions ?? []).includes(p as never);
   const ov = useQuery(() => staffService.getOverview(scope), [scope.schoolId]);
+  useReloadOnDataChange(q.reload, ov.reload);
 
   if (access.status === 'loading' || q.status === 'loading') return <LoadingBlock />;
   if (access.status === 'error') return <ErrorState message={access.error} onRetry={access.reload} />;
@@ -41,6 +44,39 @@ export const AdminHome: React.FC = () => {
   const tone = { danger: 'border-rose-300 bg-rose-50', warning: 'border-amber-300 bg-amber-50', info: 'border-blue-200 bg-white' };
   const fin = ov.data?.finance;
 
+  // Quick cards: only workflows this Admin may open (same permission rules as the Admin menu), each
+  // linking to its existing page, with a pending count from the work queue / overview where one exists.
+  const changes = g.blocked + g.toExecute + g.returned;
+  const complaints = q.data.complaintsOpen + q.data.safetyComplaints;
+  const cards = [
+    ...(can('FINANCE')
+      ? [{ to: '/admin/fees', title: 'Fee desk', icon: <ReceiptIndianRupee className="w-6 h-6" />, tint: 'bg-emerald-50 text-emerald-700',
+          status: fin == null ? '…' : fin.overdue > 0 ? `${formatINR(fin.overdue)} overdue` : 'No overdue fees', alert: (fin?.overdue ?? 0) > 0 }]
+      : []),
+    ...(can('ADMISSIONS') || can('ACADEMIC_OPS')
+      ? [{ to: '/admin/students', title: 'Students', icon: <Users className="w-6 h-6" />, tint: 'bg-blue-50 text-blue-700', status: 'Records & onboarding', alert: false }]
+      : []),
+    ...(can('ADMISSIONS') || can('FINANCE')
+      ? [{ to: '/admin/academic-year', title: 'Academic year', icon: <CalendarPlus className="w-6 h-6" />, tint: 'bg-sky-50 text-sky-700', status: 'Roster & year fees', alert: false }]
+      : []),
+    ...(can('FINANCE') || can('ACADEMIC_OPS')
+      ? [{ to: '/admin/requests', title: 'Changes', icon: <ClipboardList className="w-6 h-6" />, tint: 'bg-indigo-50 text-indigo-700',
+          status: changes > 0 ? `${changes} need action` : 'Nothing pending', alert: changes > 0 }]
+      : []),
+    ...(can('ACADEMIC_OPS')
+      ? [{ to: '/admin/substitution', title: 'Substitution', icon: <UserCog className="w-6 h-6" />, tint: 'bg-violet-50 text-violet-700',
+          status: q.data.substitutionsUncovered > 0 ? `${q.data.substitutionsUncovered} period(s) uncovered` : 'All periods covered', alert: q.data.substitutionsUncovered > 0 }]
+      : []),
+    ...(can('COMPLAINTS')
+      ? [{ to: '/admin/complaints', title: 'Complaints', icon: <MessageSquareWarning className="w-6 h-6" />, tint: 'bg-rose-50 text-rose-700',
+          status: complaints > 0 ? `${complaints} open` : 'None open', alert: complaints > 0 }]
+      : []),
+    ...(can('TRANSPORT')
+      ? [{ to: '/admin/transport', title: 'Transport', icon: <Bus className="w-6 h-6" />, tint: 'bg-amber-50 text-amber-700',
+          status: q.data.transportPending > 0 ? `${q.data.transportPending} request(s)` : 'No requests', alert: q.data.transportPending > 0 }]
+      : [])
+  ];
+
   return (
     <div className="space-y-6 max-w-3xl xl:max-w-6xl">
       <div>
@@ -51,6 +87,13 @@ export const AdminHome: React.FC = () => {
         <p role="alert" className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-sm text-amber-900 flex gap-2">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> Only {access.data.quorum.activeAdmins} active Admin. Keep at least two so the school is never locked out.
         </p>
+      )}
+      {cards.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          {cards.map(c => (
+            <QuickCard key={c.to} fill to={c.to} icon={c.icon} tint={c.tint} title={c.title} status={c.status} alert={c.alert} />
+          ))}
+        </div>
       )}
       <Section title="Waiting on you">
         {items.length === 0 ? (

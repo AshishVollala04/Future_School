@@ -657,6 +657,14 @@
       "mostOverdue": "తరగతి వారీగా ఎక్కువ బకాయిలు",
       "noOverdue": "గడువు మీరిన ఫీజులు లేవు.",
       "classRow": "తరగతి {{label}} · {{count}} విద్యార్థి(లు)"
+    },
+    "quick": {
+      "pending": "{{count}} పెండింగ్",
+      "nothing": "ఏమీ పెండింగ్ లేదు",
+      "academicStatus": "{{total}} తరగతులలో {{published}} ప్రచురించబడ్డాయి",
+      "searchClass": "తరగతి లేదా టీచర్ కోసం వెతకండి",
+      "noMatch": "సరిపోయే తరగతి లేదు",
+      "hallStatus": "{{exam}}: {{total}}లో {{released}} విడుదలయ్యాయి"
     }
   }
 }

@@ -6,10 +6,11 @@
  * their own governed changes. Those links simply do not exist here.
  */
 import React from 'react';
-import { Bus, CalendarPlus, ClipboardList, LayoutDashboard, MessageCircle, DoorOpen, FileClock, Home, MessageSquareWarning, ReceiptIndianRupee, ShieldCheck, UserCog, Users } from 'lucide-react';
+import { Bus, CalendarPlus, ClipboardList, LayoutDashboard, MessageCircle, FileClock, Home, MessageSquareWarning, ReceiptIndianRupee, ShieldCheck, UserCog, Users } from 'lucide-react';
 import { StaffShell, StaffNavGroup, StaffNavItem } from '../../../components/layout/StaffShell';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
+import { useReloadOnDataChange } from '../../../hooks/useReloadOnDataChange';
 import { adminService } from '../../../services/adminService';
 import { ErrorState, LoadingBlock } from '../../../components/common/States';
 import { AdminPermission } from '../../../types/domain';
@@ -18,6 +19,8 @@ export const AdminLayout: React.FC = () => {
   const scope = useScope();
   const access = useQuery(() => adminService.getAccess(scope), [scope.schoolId, scope.userId]);
   const queue = useQuery(() => adminService.getWorkQueue(scope), [scope.schoolId, scope.userId]);
+  // Menu badges drop as soon as an Admin acts (no page reload needed).
+  useReloadOnDataChange(queue.reload);
   if (access.status === 'loading') return <div className="p-6"><LoadingBlock /></div>;
   if (access.status === 'error') return <div className="p-6"><ErrorState message={access.error} onRetry={access.reload} /></div>;
 
@@ -42,7 +45,6 @@ export const AdminLayout: React.FC = () => {
     ...(can('ACADEMIC_OPS') ? [{ to: '/admin/substitution', label: 'Substitution', icon: UserCog, badge: q?.substitutionsUncovered }] : []),
     ...(can('TRANSPORT') ? [{ to: '/admin/transport', label: 'Transport', icon: Bus, badge: q?.transportPending }] : []),
     ...(can('COMPLAINTS') ? [{ to: '/admin/complaints', label: 'Complaints', icon: MessageSquareWarning, badge: q?.complaintsOpen }] : []),
-    { to: '/admin/gate', label: 'Pickup gate check', icon: DoorOpen },
     { to: '/admin/alerts', label: 'WhatsApp alerts', icon: MessageCircle }
   ];
   if (ops.length) groups.push({ title: 'School operations', items: ops });
@@ -59,7 +61,13 @@ export const AdminLayout: React.FC = () => {
     { to: '/admin/home', label: 'Home', icon: Home },
     ...(can('FINANCE') || can('ACADEMIC_OPS') ? [{ to: '/admin/requests', label: 'Changes', icon: ClipboardList }] : []),
     ...(can('FINANCE') ? [{ to: '/admin/fees', label: 'Fees', icon: ReceiptIndianRupee }] : []),
-    ...(can('COMPLAINTS') ? [{ to: '/admin/complaints', label: 'Complaints', icon: MessageSquareWarning }] : [])
+    ...(can('COMPLAINTS') ? [{ to: '/admin/complaints', label: 'Complaints', icon: MessageSquareWarning }] : []),
+    ...(can('REPORTS') ? [{ to: '/admin/udise', label: 'UDISE+', icon: FileClock }] : [])
   ];
-  return <StaffShell groups={groups} bottom={bottom} roleLabel="Admin" />;
+  // Phone menu (top-left button): leave out what the home quick cards already open. Desktop sidebar keeps everything.
+  const quickCardPaths = new Set(['/admin/fees', '/admin/students', '/admin/academic-year', '/admin/requests', '/admin/complaints', '/admin/transport', '/admin/substitution']);
+  const drawerGroups: StaffNavGroup[] = groups
+    .map(g => ({ ...g, items: g.items.filter(i => !quickCardPaths.has(i.to)) }))
+    .filter(g => g.items.length > 0);
+  return <StaffShell groups={groups} drawerGroups={drawerGroups} bottom={bottom} showMoreInBottomNav={false} roleLabel="Admin" />;
 };

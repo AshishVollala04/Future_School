@@ -93,8 +93,10 @@ public class CommsService {
         boolean all = audience == null || audience.isEmpty() || audience.contains("ALL");
         if (!Teaching.isLeadership(p)) {
             if (all) throw Teaching.denied("Only the Principal or Admin can send a notice to the whole school.");
+            // Teachers: only classes they are assigned to (Class Teacher or Subject Teacher). classOrThrow is
+            // school-filtered, so another school's class id is "not found" here.
             for (String c : audience) {
-                if (!Teaching.isClassTeacher(p, t.classOrThrow(c))) throw Teaching.denied("You can send notices only to your own class.");
+                if (!t.isAssignedTeacher(p, t.classOrThrow(c))) throw Teaching.denied("You can send notices only to classes you teach.");
             }
         } else if (!all) {
             audience.forEach(t::classOrThrow);

@@ -9,11 +9,12 @@
  */
 import React, { useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { BookOpenCheck, CalendarCheck, CalendarOff, ClipboardList, FileCheck2, FileEdit, Home, KeyRound, Megaphone, MessageSquare, NotebookPen, ShieldCheck, UserCheck } from 'lucide-react';
+import { BookOpenCheck, DoorOpen, CalendarCheck, CalendarOff, ClipboardList, FileCheck2, FileEdit, Home, KeyRound, Megaphone, MessageSquare, NotebookPen, ShieldCheck, UserCheck } from 'lucide-react';
 import { TeacherBell } from './TeacherBell';
 import { StaffShell, StaffNavGroup, StaffNavItem } from '../../../components/layout/StaffShell';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
+import { useReloadOnDataChange } from '../../../hooks/useReloadOnDataChange';
 import { academicsService } from '../../../services/academicsService';
 import { leaveService } from '../../../services/leaveService';
 import { ErrorState, LoadingBlock } from '../../../components/common/States';
@@ -48,6 +49,8 @@ const TeacherPortal: React.FC = () => {
     () => (ct ? leaveService.listForClass(scope, ct.id) : Promise.resolve({ ok: true as const, data: [] })),
     [scope.schoolId, ct?.id]
   );
+  // The leave-request badge drops as soon as the Class Teacher decides one.
+  useReloadOnDataChange(leaves.reload);
   if (a.status === 'loading') return <div className="p-6"><LoadingBlock /></div>;
 
   const pendingLeave = (leaves.data ?? []).filter(l => l.status === 'PENDING').length;
@@ -73,7 +76,8 @@ const TeacherPortal: React.FC = () => {
         { to: '/teacher/attendance', label: 'Attendance register', icon: CalendarCheck },
         { to: '/teacher/leave-requests', label: 'Leave requests', icon: UserCheck, badge: pendingLeave },
         { to: '/teacher/class-results', label: 'Marks review & report cards', icon: ClipboardList },
-        { to: '/teacher/hall-tickets', label: 'Hall ticket release', icon: ShieldCheck }
+        { to: '/teacher/hall-tickets', label: 'Hall ticket release', icon: ShieldCheck },
+        { to: '/teacher/gate', label: 'Pickup gate check', icon: DoorOpen }
       ]
     });
   }

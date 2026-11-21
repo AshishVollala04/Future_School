@@ -30,7 +30,7 @@ erDiagram
 
     FEE_CHARGES ||--o{ FEE_INSTALMENTS : breaks_into
     FEE_INSTALMENTS ||--o{ FEE_PAYMENTS : receipts
-    FEE_PAYMENTS ||--o{ PAYMENT_ORDERS : tracks_gateway
+    FEE_PAYMENTS ||--o{ FEE_PAYMENT_ALLOCATIONS : allocates
 ```
 
 ---
@@ -147,10 +147,12 @@ Stores individual student marks including composite subject breakdowns.
 
 ---
 
-### 2.5 Fee Ledger & Razorpay Orders
+### 2.5 Fee Ledger (staff-recorded collections)
+
+> **Fee policy (current):** parents do not pay in the app. Fees are paid at the school fee counter or by the school's direct bank QR; finance staff record the collection in the Fee Desk (`POST /api/office/fees/cash`) and the system issues the receipt. Online gateway payments (Razorpay / UPI checkout) are **out of scope / deferred**; the backend denies `/api/parent/fees/orders/**` and `/api/payments/**`. See PRD Module 4.
 
 #### `fee_payments`
-Official digital transaction records and PDF receipt ledger.
+Collections recorded by finance staff at the school counter, with the official receipt number. Never created by a parent action.
 | Column | Type | Constraints | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `UUID` | `PRIMARY KEY` | Receipt unique ID |
@@ -159,8 +161,8 @@ Official digital transaction records and PDF receipt ledger.
 | `instalment_id`| `UUID` | `NOT NULL REFERENCES fee_instalments(id)`| Term reference (`Term 1`, `Term 2`, etc.) |
 | `receipt_number`| `VARCHAR(64)` | `UNIQUE NOT NULL` | Formatted number (e.g. `REC-2026-08492`)|
 | `amount_paid` | `NUMERIC(10,2)`| `NOT NULL` | Exact transaction currency in INR |
-| `payment_mode` | `VARCHAR(32)` | `NOT NULL` | `RAZORPAY_UPI`, `CASH_COUNTER`, `CHEQUE` |
-| `transaction_ref`| `VARCHAR(128)`| `NULL` | Razorpay payment ID (`pay_Ox9...`) |
+| `payment_mode` | `VARCHAR(32)` | `NOT NULL` | `CASH_AT_OFFICE` (counter cash / school bank QR recorded by the office). Online gateway modes are not used. |
+| `transaction_ref`| `VARCHAR(128)`| `NULL` | Office reference / slip note (no gateway payment ID) |
 | `payment_date` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL` | Transaction confirmation timestamp |
 
 ---
@@ -178,6 +180,6 @@ V7__trusted_devices.sql            -> Trusted mobile device tokens for parents
 V8__parent_pin.sql                 -> 4-digit parent MPIN hashing and verification
 V9__microsoft_google_sign_in.sql   -> OAuth2 IdP links for principals & leadership
 V10__parent_whatsapp_alerts.sql    -> Absence 10-min hold buffer and WhatsApp dispatch
-V11__razorpay_orders.sql           -> Razorpay orders, webhook logs, and UPI tracking
+V11__razorpay_orders.sql           -> Legacy: Razorpay order tables (unused; online payments are out of scope)
 V12__bus_tracking.sql              -> GPS routes, live bus beacons, and driver contacts
 ```

@@ -14,7 +14,7 @@ sequenceDiagram
     participant Auth as Auth & Session Service
     participant SMS as DLT SMS Gateway
     participant Core as Backend Core API
-    participant PG as Razorpay / UPI
+    actor Office as School Fee Desk (Admin, FINANCE)
 
     Note over Parent,App: Phase 1: First-Time Onboarding
     Parent->>App: Opens App & Enters 10-digit Mobile Number
@@ -35,17 +35,14 @@ sequenceDiagram
     App->>Auth: Verify Local/Remote MPIN Challenge
     Auth-->>App: Unlocks Session & Loads Dashboard (< 1.2s)
 
-    Note over Parent,App: Phase 3: Term Fee Clearance via UPI
+    Note over Parent,App: Phase 3: Term Fee Clearance at the School Counter (no in-app payment)
     Parent->>App: Taps "Fees" Tab -> Views Term 2 Balance (₹12,500)
-    Parent->>App: Clicks "Pay via UPI"
-    App->>Core: POST /api/payments/orders/create
-    Core->>PG: Generate Razorpay UPI Order
-    PG-->>App: UPI Intent / QR Gateway
-    Parent->>PG: Approves Payment via PhonePe / GPay / Paytm
-    PG->>Core: Webhook: payment.captured (HMAC SHA-256 Verified)
-    Core->>Core: Allocate Fee Ledger & Generate PDF Receipt
-    Core-->>App: Instant Payment Success Confirmation
-    Parent->>App: Downloads Official PDF Fee Receipt with QR Code
+    Parent->>Office: Pays at the fee counter or by the school's direct bank QR
+    Office->>Core: POST /api/office/fees/cash (amount, note)
+    Core->>Core: Allocate oldest dues first, issue receipt number, audit FEE_CASH_RECORDED
+    Core-->>App: Balance and receipt history update (GET /api/parent/fees/summary, /payments)
+    Parent->>App: Prints / downloads the recorded receipt
+    Note over Core,App: Recording a payment never releases a hall ticket; the Class Teacher releases it after server-computed clearance.
 ```
 
 ---

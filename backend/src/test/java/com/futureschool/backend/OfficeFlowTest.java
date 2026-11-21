@@ -114,8 +114,12 @@ class OfficeFlowTest {
         assertEquals(8, code.length(), issued.toString());
         assertFalse(api.getJson("/api/parent/pickup", parent).toString().contains(code), "the code is shown only once");
 
-        JsonNode other = api.post("/api/staff/pickup/verify", Map.of("code", code), api.staff("principal@stjudemodel.edu.in", "StJude@2026", "SJM"));
-        assertEquals("INVALID", other.get("code").asText(), "another school's gate cannot use it");
+        JsonNode other = api.post("/api/staff/pickup/verify", Map.of("code", code), api.teacher("9848033333", "SJM"));
+        assertEquals("INVALID", other.get("code").asText(), "another school's class teacher cannot use it");
+        // Only the child's Class Teacher checks the pass: not an Admin, not a teacher of another class.
+        assertEquals(403, api.post("/api/staff/pickup/verify", Map.of("code", code), finance()).get("_status").asInt(), "admins no longer check passes");
+        JsonNode notMyClass = api.post("/api/staff/pickup/verify", Map.of("code", code), api.teacher("9848022222", "GVS"));
+        assertEquals(403, notMyClass.get("_status").asInt(), "Nair is not Aarav's class teacher: " + notMyClass);
         String sarah = api.teacher("9848012345", "GVS");
         JsonNode ok = api.post("/api/staff/pickup/verify", Map.of("code", code.toLowerCase()), sarah);
         assertEquals("USED", ok.get("status").asText(), ok.toString());

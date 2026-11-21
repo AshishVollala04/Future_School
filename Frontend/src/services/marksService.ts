@@ -140,6 +140,7 @@ class MockMarksService implements MarksService {
     return guarded(() => {
       if (scope.role !== 'TEACHER') throw new AccessDenied();
       const db = getDb(scope.schoolId);
+      const sheetsBefore = db.marksSheets.length;
       const out: SheetSummary[] = [];
       for (const a of db.assessments.filter(x => x.status === 'OPEN')) {
         for (const cs of db.classSections.filter(c => a.grades.includes(c.grade) && roster(db, c.id).length > 0)) {
@@ -148,7 +149,8 @@ class MockMarksService implements MarksService {
           }
         }
       }
-      saveDb(db);
+      // Save only when a missing sheet was created (a plain read must not signal "data changed").
+      if (db.marksSheets.length !== sheetsBefore) saveDb(db);
       const order = { RETURNED: 0, DRAFT: 1, NOT_STARTED: 2, SUBMITTED: 3, ACCEPTED: 4 } as const;
       return out.sort((x, y) => order[x.sheet.status] - order[y.sheet.status]);
     });
@@ -195,8 +197,9 @@ class MockMarksService implements MarksService {
       const a = db.assessments.find(x => x.id === assessmentId);
       if (!cs || !a) throw new AccessDenied('Not found.');
       if (!isCT(scope, cs) && scope.role !== 'PRINCIPAL') throw new AccessDenied('Only the Class Teacher reviews this class.');
+      const sheetsBefore = db.marksSheets.length;
       const list = cs.subjectTeachers.map(t => summary(db, ensureSheet(db, a, cs, t.subject)));
-      saveDb(db);
+      if (db.marksSheets.length !== sheetsBefore) saveDb(db);
       return list;
     });
   }

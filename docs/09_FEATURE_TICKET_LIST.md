@@ -9,7 +9,7 @@
 | Epic ID | Epic Title | P0 (Blockers) | P1 (High) | P2 (Medium) | Total Points |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **EPIC-01** | Production Infrastructure & Security Hardening | 4 | 1 | 0 | 21 SP |
-| **EPIC-02** | Live Razorpay Payment Gateway & Ledger | 3 | 1 | 0 | 18 SP |
+| **EPIC-02** | ~~Live Razorpay Payment Gateway~~ (deferred / out of scope: offline counter fees) | 0 | 0 | 0 | 0 SP |
 | **EPIC-03** | Real SMS Gateway (TRAI DLT) & OTP Delivery | 3 | 0 | 0 | 13 SP |
 | **EPIC-04** | Meta WhatsApp Cloud API Parent Alerts | 0 | 3 | 1 | 16 SP |
 | **EPIC-05** | Android Play Store Release & Keystore Signing | 0 | 3 | 1 | 14 SP |
@@ -18,7 +18,7 @@
 | **EPIC-08** | Principal Governance, Hall Tickets & UDISE+ | 1 | 2 | 1 | 16 SP |
 | **EPIC-09** | Transport GPS Live Bus Tracking | 0 | 1 | 3 | 13 SP |
 | **EPIC-10** | Owner Multi-School Group Dashboard | 0 | 1 | 2 | 11 SP |
-| **TOTAL** | | **13** | **17** | **12** | **157 SP** |
+| **TOTAL** | | **10** | **16** | **12** | **139 SP** |
 
 ---
 
@@ -47,15 +47,18 @@
 
 ---
 
-### Epic 02: Live Payments & Razorpay UPI (P0)
+### Epic 02: Online Payments (Razorpay / UPI) — DEFERRED, OUT OF SCOPE
 
-#### `FS-201` [P0, 8 SP] Complete Razorpay Institutional KYC & Webhook Registration
+> Not planned. PRD Module 4 sets the policy: fees are paid at the school counter or by the school's direct bank QR and recorded by finance staff in the Fee Desk. The backend denies the parent order and webhook endpoints. Do not re-enable without a new product decision. The tickets below are kept for history only.
+
+
+#### ~~`FS-201`~~ [Deferred] Razorpay Institutional KYC & Webhook Registration
 - **Description:** Submit school entity legal documents for Razorpay payment gateway approval and register webhook endpoint `https://api.futureschool.in/api/payments/webhook`.
 - **Acceptance Criteria:**
   - Razorpay live API keys (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`) provisioned.
   - Webhook configured for `payment.captured` with HMAC-SHA256 signature verification.
 
-#### `FS-202` [P0, 5 SP] UPI In-App Payment Flow & Step-up PIN
+#### ~~`FS-202`~~ [Deferred] UPI In-App Payment Flow & Step-up PIN
 - **Description:** Connect parent fee checkout button to real Razorpay UPI order flow with step-up 4-digit MPIN verification before launching UPI intent.
 - **Acceptance Criteria:**
   - Parent enters 4-digit MPIN $\rightarrow$ launches UPI app (PhonePe/GPay) $\rightarrow$ updates ledger upon webhook confirmation.

@@ -32,6 +32,15 @@ check('fee page lists recorded payments', page.includes('feeService.listPayments
 check('fee page has no pay / checkout action', !/payAmount|parent\.fees\.pay'|parent\.fees\.checkout|mockCheckout|promptSensitiveActionAuth/.test(page));
 check('fee page does not claim a payment releases the hall ticket', !/automatically unlock/i.test(page));
 
+// The student fee screen: balances and recorded receipts only; no checkout, no local "paid", no old payment API.
+const studentPage = readFileSync(join(SRC, 'modules/student/StudentFees.tsx'), 'utf8');
+check('student fee page has no checkout / payment modal', !/showPaymentModal|handlePayNowSubmit|Authorize Payment|Payment Gateway/i.test(studentPage));
+check('student fee page never marks dues paid locally', !/processFeePayment/.test(studentPage));
+check('student fee page does not call the old payment API', !/collectPayment|FeeApiService/.test(studentPage));
+check('student fee page shows receipts and how to pay at the counter', /Receipts issued by the school fee office/.test(studentPage) && /school fee counter/.test(studentPage));
+const callsCollect = files.filter(f => /\.collectPayment\s*\(/.test(readFileSync(f, 'utf8'))).map(f => f.slice(SRC.length));
+check('no screen calls the old collectPayment endpoint', callsCollect.length === 0, callsCollect);
+
 // The fee service a parent uses has no write method at all.
 const mem: Record<string, string> = {};
 (globalThis as any).window = { localStorage: { getItem: (k: string) => (k in mem ? mem[k] : null), setItem: (k: string, v: string) => { mem[k] = v; }, removeItem: (k: string) => { delete mem[k]; }, key: (i: number) => Object.keys(mem)[i] ?? null, get length() { return Object.keys(mem).length; } } };

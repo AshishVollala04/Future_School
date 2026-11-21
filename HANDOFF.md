@@ -61,10 +61,9 @@ Each branch is based on the one before it.
 
 ## Next tasks, in priority order
 Compared with competitor schoolites.com, these are what we are missing.
-1. **Razorpay and UPI payments.**
-   - Replace the simulated payment in `ParentDataService.confirmMockPayment` with Razorpay orders.
-   - Verify the webhook signature, and keep the PIN step-up.
-   - Keep the simulated mode for development, and store no card or UPI data.
+1. **Online payments: deferred, out of scope.**
+   - Policy (PRD Module 4): parents do not pay in the app; fees are paid at the school counter or by the school's direct bank QR and recorded by finance staff in the Fee Desk, which issues the receipt (PRD Module 4). Online gateway payments (Razorpay / UPI checkout, payment orders, webhooks) are out of scope / deferred, and the backend denies those endpoints.
+   - The parent order, mock-confirm and webhook endpoints are removed or denied; do not re-enable them without a new product decision.
 2. **UDISE+ export.**
    - An Admin CSV or Excel export of student fields in UDISE+ format, with validation that lists rows with missing fields.
    - Students already have aadhaar, apaar, caste, mother tongue and district fields.

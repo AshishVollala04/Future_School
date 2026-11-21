@@ -51,8 +51,7 @@ There is no student id in any URL: the child always comes from the session (one 
 |---|---|
 | `GET fees/summary` | Instalments, concessions, paid, outstanding, next due (server-computed) |
 | `GET fees/payments` | Receipts and refunds (a refund is its own record; the payment is kept) |
-| `POST fees/orders` | `{instalments:[2]}` or `{amount:2000}`. The server decides the allocation (oldest due first, min ₹1,000) |
-| `POST fees/orders/{id}/confirm-mock` | **Prototype** payment: needs `method` (UPI/CARD/NETBANKING) and a fresh `stepUpToken` for PAYMENT. Re-checks the dues. No card or UPI data is ever accepted |
+| ~~`POST fees/orders`, `fees/orders/{id}/confirm-mock`, `fees/orders/{id}/verify`~~ | Removed: parents do not pay in the app (denied, 403). Finance staff record counter collections with `POST /api/office/fees/cash`. |
 | `GET attendance?days=30` | Morning/afternoon days. Today appears only once marked |
 | `GET results` | Published results, CURRENT version first; superseded versions are kept; absent = `"AB"` |
 | `GET hall-tickets` | Fee clearance (exam's rule) **and** Class Teacher release. Payment alone never releases |

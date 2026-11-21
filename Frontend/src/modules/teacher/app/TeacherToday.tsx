@@ -6,9 +6,10 @@
  *   3. My periods and Substitution duty.
  */
 import React from 'react';
-import { BookOpenCheck, MessageSquare, ShieldCheck, UserCheck } from 'lucide-react';
+import { BookOpenCheck, DoorOpen, MessageSquare, ShieldCheck, UserCheck } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
+import { useReloadOnDataChange } from '../../../hooks/useReloadOnDataChange';
 import { academicsService } from '../../../services/academicsService';
 import { leaveService } from '../../../services/leaveService';
 import { hallTicketService } from '../../../services/hallTicketService';
@@ -35,6 +36,7 @@ export const TeacherToday: React.FC = () => {
   const leaves = useQuery(() => (ct ? leaveService.listForClass(scope, ct.id) : Promise.resolve({ ok: true as const, data: [] })), ctKey);
   const tickets = useQuery(() => (ct ? hallTicketService.listForClass(scope, ct.id) : Promise.resolve({ ok: true as const, data: [] })), ctKey);
 
+  useReloadOnDataChange(homework.reload, inbox.reload, notices.reload, leaves.reload, tickets.reload);
   if (a.status === 'loading') return <LoadingBlock />;
 
   const myPeriods = (periods.data ?? []).map(s => ({ ...s, cls: s.classLabel }));
@@ -61,13 +63,14 @@ export const TeacherToday: React.FC = () => {
       <h1 className="text-xl font-bold">Today</h1>
 
       {/* 1. Quick cards: swipe on a phone, a grid from tablet width. */}
-      <div className={`-mx-4 px-4 sm:-mx-6 sm:px-6 flex gap-3 overflow-x-auto no-scrollbar snap-x pb-1 md:mx-0 md:px-0 md:grid md:overflow-visible ${ct ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
+      <div className={`-mx-4 px-4 sm:-mx-6 sm:px-6 flex gap-3 overflow-x-auto no-scrollbar snap-x pb-1 md:mx-0 md:px-0 md:grid md:overflow-visible ${ct ? 'md:grid-cols-3 lg:grid-cols-5' : 'md:grid-cols-2'}`}>
         <QuickCard to="/teacher/homework" icon={<BookOpenCheck className="w-6 h-6" />} tint="bg-blue-50 text-blue-700" title="Homework" status={hwStatus} alert={toCheck > 0} />
         <QuickCard to="/teacher/messages" icon={<MessageSquare className="w-6 h-6" />} tint="bg-indigo-50 text-indigo-700" title="Messages from parents" status={msgStatus} alert={waiting > 0} />
         {ct && (
           <>
             <QuickCard to="/teacher/leave-requests" icon={<UserCheck className="w-6 h-6" />} tint="bg-emerald-50 text-emerald-700" title="Leave requests" status={leaveStatus} alert={pendingLeave > 0} />
             <QuickCard to="/teacher/hall-tickets" icon={<ShieldCheck className="w-6 h-6" />} tint="bg-sky-50 text-sky-700" title="Hall ticket" status={ticketStatus} alert={toRelease > 0} />
+            <QuickCard to="/teacher/gate" icon={<DoorOpen className="w-6 h-6" />} tint="bg-amber-50 text-amber-700" title="Pickup gate check" status="Check a pickup pass" />
           </>
         )}
       </div>

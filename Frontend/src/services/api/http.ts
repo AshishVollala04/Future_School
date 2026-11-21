@@ -5,6 +5,7 @@
 import { Result } from '../../types/session';
 import { API_BASE_URL } from '../../app/backendConfig';
 import { authService } from '../authService';
+import { notifyStaffDataChanged } from '../../app/staffEvents';
 
 async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH', path: string, body?: unknown): Promise<Result<T>> {
   const headers: Record<string, string> = { ...authService.authHeader() };
@@ -21,6 +22,8 @@ async function send<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH', path: string, b
       return { ok: false, error: data?.error ?? 'Your session has ended. Please sign in again.', code: data?.code ?? 'UNAUTHORIZED' };
     }
     if (!res.ok) return { ok: false, error: data?.error ?? 'Something went wrong. Please try again.', code: data?.code ?? String(res.status) };
+    // A successful change: let menu badges, quick cards and the bell refresh their counts right away.
+    if (method !== 'GET') notifyStaffDataChanged();
     return { ok: true, data: data as T };
   } catch {
     return { ok: false, error: 'Cannot reach the FutureSchool server. Check your connection and try again.', code: 'NETWORK' };

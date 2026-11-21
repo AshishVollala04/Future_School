@@ -4,6 +4,7 @@
  */
 import { storage, storageKeys } from '../../services/storage';
 import { SchoolDb, SEEDS, SEED_VERSION } from './seed';
+import { notifyStaffDataChanged } from '../../app/staffEvents';
 
 interface Stored {
   version: string;
@@ -33,6 +34,8 @@ export function getDb(schoolId: string): SchoolDb {
 export function saveDb(db: SchoolDb): void {
   cache.set(db.schoolId, db);
   storage.set<Stored>(storageKeys.school(db.schoolId, 'db'), { version: SEED_VERSION, db });
+  // Prototype writes refresh menu badges and quick cards like server writes do.
+  notifyStaffDataChanged();
 }
 
 function emptyDb(schoolId: string): SchoolDb {

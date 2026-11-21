@@ -75,6 +75,14 @@ public class Teaching {
         return p.role() == UserRole.TEACHER && p.account().getId().equals(c.getClassTeacherId());
     }
 
+    /** A teacher assigned to the class: its Class Teacher, or a Subject Teacher allocated to it (this school). */
+    public boolean isAssignedTeacher(SchoolPrincipal p, SchoolClass c) {
+        if (p.role() != UserRole.TEACHER) return false;
+        if (isClassTeacher(p, c)) return true;
+        String me = p.account().getId();
+        return subjectTeachers.findByClassIdOrderByIdAsc(c.getId()).stream().anyMatch(t -> me.equals(t.getStaffId()));
+    }
+
     public static boolean isLeadership(SchoolPrincipal p) {
         return p.role() == UserRole.PRINCIPAL || p.role() == UserRole.ADMIN;
     }

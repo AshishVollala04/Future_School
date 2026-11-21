@@ -573,8 +573,8 @@ export class WorkflowStoreManager {
         this.principalApproveReportCards();
         this.classTeacherPublishReportCards();
         break;
-      case 3: // Fee Paid -> Hall Ticket Released
-        this.processFeePayment(1200, 'Online Demo Payment');
+      case 3: // Fee recorded at the counter (demo) -> Class Teacher releases the hall ticket
+        this.processFeePayment(1200, 'Cash at school counter (demo)');
         this.classTeacherReleaseHallTicket('GVS-2027-0001');
         break;
       case 4: // Transport Approved

@@ -212,4 +212,18 @@ await check('roster service calls the academic-year roster endpoints with explic
   assert.equal(denied.ok, false);
 });
 
+await check('a successful save signals "data changed" so badges refresh; reads and refusals do not', async () => {
+  (globalThis as Record<string, unknown>).Event = class { type: string; constructor(type: string) { this.type = type; } };
+  nextResponse = { status: 200, body: { ok: true } };
+  events.length = 0;
+  await api.get('/api/staff/overview');
+  assert.deepEqual(events, [], 'a read changes nothing');
+  await api.post('/api/staff/leave/decide', { id: 'L1', decision: 'APPROVED' });
+  assert.deepEqual(events, ['futureschool:staff-data-changed']);
+  events.length = 0;
+  nextResponse = { status: 400, body: { error: 'Already decided.', code: 'STATE' } };
+  await api.post('/api/staff/leave/decide', { id: 'L1', decision: 'APPROVED' });
+  assert.deepEqual(events, [], 'a refused save changes nothing');
+});
+
 if (passed === 0) process.exit(1);

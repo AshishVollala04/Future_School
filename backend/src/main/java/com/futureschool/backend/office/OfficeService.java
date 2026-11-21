@@ -422,13 +422,20 @@ public class OfficeService {
         return passView(passes.save(x), null);
     }
 
-    /** Gate check by staff: valid once, within 2 hours, for this school only. */
+    /**
+     * Gate check by the child's Class Teacher: valid once, within 2 hours, for this school only.
+     * Admins and other staff do not check passes; a teacher of another class is refused (the pass stays unused).
+     */
     @Transactional
     public Map<String, Object> verifyPass(SchoolPrincipal p, String code) {
-        if (!p.isStaff()) throw Teaching.denied("Only school staff check pickup passes.");
+        if (p.role() != UserRole.TEACHER) throw Teaching.denied("Pickup passes are checked by the child's Class Teacher.");
         String c = code == null ? "" : code.trim().toUpperCase();
         PickupPass x = passes.findAll().stream().filter(y -> y.getCodeHash().equals(hash(c))).findFirst()
                 .orElseThrow(() -> Teaching.rule("INVALID", "No pass with this code."));
+        Student child = t.students().findById(x.getStudentId()).orElseThrow(() -> Teaching.rule("INVALID", "No pass with this code."));
+        if (!Teaching.isClassTeacher(p, t.classOrThrow(child.getClassId()))) {
+            throw Teaching.denied("This pass is for a child in another class. Ask that child's Class Teacher to check it.");
+        }
         if ("USED".equals(x.getStatus())) throw Teaching.rule("USED", "This pass was already used at " + x.getUsedAt() + ".");
         if (!"ACTIVE".equals(x.getStatus())) throw Teaching.rule("CANCELLED", "This pass was cancelled by the parent.");
         if (Instant.now().isAfter(x.getValidUntil())) throw Teaching.rule("EXPIRED", "This pass has expired.");

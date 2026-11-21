@@ -37,7 +37,7 @@ erDiagram
 
     students ||--o{ fee_charges : "billed"
     fee_charges ||--o{ fee_concessions : "waivers"
-    students ||--o{ fee_payment_orders : "checkout orders"
+    students ||--o{ fee_payment_orders : "legacy, unused"
     students ||--o{ fee_payments : "payments"
     fee_payments ||--o{ fee_payment_allocations : "allocates to charges"
     fee_charges ||--o{ fee_payment_allocations : "settled by"
@@ -292,7 +292,9 @@ erDiagram
 
 ---
 
-### Domain E — Fees, Concessions & Razorpay Payments
+### Domain E — Fees, Concessions & Payments
+
+> **Fee policy:** parents do not pay in the app; fees are paid at the school counter or by the school's direct bank QR and recorded by finance staff in the Fee Desk, which issues the receipt (PRD Module 4). Online gateway payments (Razorpay / UPI checkout, payment orders, webhooks) are out of scope / deferred, and the backend denies those endpoints. `fee_payment_orders` and the V11 Razorpay columns remain in the schema but are unused.
 
 #### `fee_instalments` *(Term 1–4 schedules per school, 8 rows)*
 - **PK:** `id` (`varchar(96)`)

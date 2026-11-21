@@ -67,10 +67,11 @@ All JPA repositories inherit from `TenantSafeRepository<T, ID>`, which automatic
 | **Enter Subject Raw Marks** | ❌ | ✅ | ❌ | ❌ | ❌ |
 | **Verify Gradebook (Class Teacher)** | ❌ | ✅ | ❌ | ❌ | ❌ |
 | **Final Approve & Publish Report Cards** | ❌ | ❌ | ✅ | ❌ | ❌ |
-| **Pay Term Fees Online (UPI)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Pay Term Fees Online** (out of scope: denied for every role) | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **View Own Ward Dues & Recorded Receipts** | ✅ | ❌ | ❌ | ✅ | ❌ |
 | **Create Custom Fee Structure** | ❌ | ❌ | ❌ | ✅ | ❌ |
-| **Generate Counter Cash Fee Receipt** | ❌ | ❌ | ❌ | ✅ | ❌ |
-| **Release Hall Tickets** | ❌ | ❌ | ✅ | ✅ | ❌ |
+| **Record Counter Fee Collection & Issue Receipt** (Admin with `FINANCE`) | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Release Hall Tickets** (Class Teacher of the class, after server-computed fee clearance; Principal only by audited emergency override) | ❌ | ✅ | ✅ | ❌ | ❌ |
 | **Export Statutory UDISE+ CSV** | ❌ | ❌ | ✅ | ✅ | ❌ |
 | **Cross-School Consolidated Analytics** | ❌ | ❌ | ❌ | ❌ | ✅ |
 
@@ -84,11 +85,11 @@ All JPA repositories inherit from `TenantSafeRepository<T, ID>`, which automatic
    - Upon the 3rd failed attempt, the account enters `MPIN_LOCKED` status for **15 minutes**.
    - Immediate unlock requires completing a full SMS OTP verification challenge.
 3. **Step-Up Authentication:**
-   - Any financial transaction (such as initiating a ₹10,000+ UPI fee payment) triggers a step-up MPIN re-prompt even within an active session.
+   - Sensitive parent actions (such as issuing a pickup pass or changing the PIN) trigger a step-up re-prompt even within an active session. There is no in-app fee payment to confirm.
 
 ---
 
 ## 6. Financial & PII Data Protection (PCI-DSS & DPDP Act 2023)
 
-1. **Zero Card/Bank Credential Storage:** FutureSchool servers **never touch, process, or store** credit/debit card numbers, CVVs, UPI PINs, netbanking passwords, or VPA handles. All payment flows are rendered via Razorpay's PCI-DSS Level 1 compliant SDK.
+1. **Zero Card/Bank Credential Storage:** FutureSchool servers **never touch, process, or store** credit/debit card numbers, CVVs, UPI PINs, netbanking passwords, or VPA handles. There is no in-app payment flow: fees are paid at the school counter and recorded by finance staff, so no card, UPI or bank data ever reaches the app.
 2. **Student PII Masking:** Permanent Education Numbers (PEN UDISE+) and student birth certificates stored in cloud object storage are encrypted with server-side AES-256 keys and accessible only via short-lived pre-signed URLs (5-minute TTL).

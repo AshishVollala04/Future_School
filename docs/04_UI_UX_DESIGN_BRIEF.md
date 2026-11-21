@@ -61,7 +61,7 @@ All foreground-to-background color pairings strictly comply with **WCAG 2.1 Leve
 Positioned permanently at `bottom: 0`, height `64px`, elevated with `box-shadow: 0 -2px 10px rgba(0,0,0,0.06)`:
 1. 🏠 **Home:** Today's attendance status, bus ETA countdown, priority notice card.
 2. 📖 **Academics:** Swipeable report cards (FA1 $\rightarrow$ Annual), homework diary, teacher remarks.
-3. 💳 **Fees:** Term-wise fee breakdown, instant UPI checkout, PDF receipt history.
+3. 💳 **Fees:** Term-wise fee breakdown (dues, paid, concessions, due dates, overdue), how to pay at the school counter, and the receipts the fee office recorded (view / print). No in-app checkout: online payment is out of scope.
 4. 💬 **Messages:** School circulars, teacher direct communication, consent forms.
 5. ⚙️ **More:** Student profile, language switcher (English / తెలుగు), helpdesk, logout.
 

@@ -161,9 +161,9 @@ sequenceDiagram
 ### 4.4 Parent & Student Portals
 1. **Multi-Child Switcher (Parent Portal)**:
    * Parents with multiple wards can toggle children via a persistent top banner, instantly refreshing all attendance, fee, homework, and report cards.
-2. **Fee Invoicing & Payment Gateway Simulator**:
+2. **Fee Invoicing & Counter Receipts**:
    * Instant invoice breakdown with balance tracking.
-   * Integrated mock checkout generating verified digital payment receipts stored in transaction history.
+   * No in-app checkout: fees are paid at the school counter or by the school's direct bank QR, and the fee office records them and issues receipts, shown in the transaction history. Online gateway payments are out of scope (see docs/01 PRD Module 4).
 3. **Homework Submissions & Interactive Quizzes**:
    * Students view instructions, attachments, and due dates with online submission capabilities.
    * Interactive self-grading quizzes with immediate score calculation and review feedback.

@@ -1,5 +1,5 @@
 # API Integration & Specifications Document
-## FutureSchool: REST Endpoints, Payloads, Webhooks & Gateway Contracts
+## FutureSchool: REST Endpoints, Payloads & Integration Contracts (no payment gateway)
 **Document Version:** 2.0.0 | **Protocol:** REST over HTTPS (TLS 1.3) | **Owner:** Backend Lead / Ashish Vollala
 
 ---
@@ -167,36 +167,24 @@ X-Device-Fingerprint: <HASH_STRING>  # For trusted mobile device MPIN validation
 
 ---
 
-## 4. Payment Gateway Webhook Specifications (Razorpay)
+## 4. Fee Collection (Offline Counter) — No Payment Gateway
 
-### Webhook Endpoint: `POST /api/payments/webhook`
-- **Security Check:** Backend recalculates HMAC-SHA256 signature using `app.payments.razorpay.webhook-secret` and compares with `X-Razorpay-Signature` header.
-- **Event:** `payment.captured`
-```json
-{
-  "entity": "event",
-  "account_id": "acc_Ox82k19...",
-  "event": "payment.captured",
-  "payload": {
-    "payment": {
-      "entity": {
-        "id": "pay_NQ819b28a910",
-        "amount": 1250000,
-        "currency": "INR",
-        "status": "captured",
-        "order_id": "order_MN89128aa",
-        "method": "upi",
-        "vpa": "rajesh@okhdfcbank"
-      }
-    }
-  }
-}
-```
-- **Action Triggered:**
-  1. Validates webhook signature.
-  2. Updates `payment_orders` status to `COMPLETED`.
-  3. Creates official record in `fee_payments` and decrements `fee_instalments.balance_due`.
-  4. Generates signed digital PDF receipt and alerts parent via WhatsApp notification.
+> **Fee policy (current):** parents do not pay in the app. Fees are paid at the school fee counter or by the school's direct bank QR; finance staff record the collection in the Fee Desk (`POST /api/office/fees/cash`) and the system issues the receipt. Online gateway payments (Razorpay / UPI checkout) are **out of scope / deferred**; the backend denies `/api/parent/fees/orders/**` and `/api/payments/**`. See PRD Module 4.
+
+### Record a counter collection: `POST /api/office/fees/cash`
+- **Who:** Admin with the `FINANCE` permission (school-scoped by the session; parents get `403`).
+- **Body:** `{ "studentId": "GVS-2027-0001", "amount": 6000, "note": "Counter slip 12" }`
+- **Rules:** amount must be > 0 and not more than the outstanding balance; allocated to the oldest dues first.
+- **Result:** the recorded payment with `receiptNo`, `method: "CASH_AT_OFFICE"`, `recordedByStaffId` and `allocations`; audited as `FEE_CASH_RECORDED`.
+- **Does not** release any hall ticket (the Class Teacher releases after clearance).
+
+### Parent read-only fee endpoints
+- `GET /api/parent/fees/summary`: dues per instalment and academic year, paid, concessions, overdue.
+- `GET /api/parent/fees/payments`: recorded receipts (and refunds) for the session's child only.
+
+### Removed / denied (online payments are out of scope)
+- `POST /api/parent/fees/orders`, `/api/parent/fees/orders/{id}/verify`, `/api/parent/fees/orders/{id}/confirm-mock`
+- `POST /api/payments/razorpay/webhook` (and anything under `/api/payments/**`)
 
 ---
 

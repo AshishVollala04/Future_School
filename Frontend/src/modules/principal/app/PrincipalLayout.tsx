@@ -66,8 +66,18 @@ export const PrincipalLayout: React.FC = () => {
   }
   const bottom: StaffNavItem[] = [
     { to: '/principal/home', label: t('principal.nav.bottomHome'), icon: Home },
-    { to: '/principal/report-cards', label: t('principal.nav.bottomCards'), icon: Award },
-    { to: '/principal/requests', label: t('principal.nav.bottomRequests'), icon: ClipboardCheck }
+    { to: '/principal/report-cards', label: t('principal.nav.reportCards'), icon: Award },
+    { to: '/principal/requests', label: t('principal.nav.bottomRequests'), icon: ClipboardCheck },
+    { to: '/principal/hall-tickets', label: t('principal.nav.hallTickets'), icon: ShieldAlert }
   ];
-  return <StaffShell groups={groups} bottom={bottom} roleLabel={t('principal.role')} />;
+  // Mobile menu (top-left button): everything except the approvals, which are the quick cards on the home page.
+  // The desktop sidebar keeps the full list.
+  // Approvals and hall tickets are quick cards on the home page, so the phone menu leaves them out.
+  const approvalPaths = new Set([...groups[1].items.map(i => i.to), '/principal/hall-tickets']);
+  const drawerGroups: StaffNavGroup[] = groups
+    .map(g => ({ ...g, items: g.items.filter(i => !approvalPaths.has(i.to)) }))
+    .filter(g => g.items.length > 0);
+  return (
+    <StaffShell groups={groups} drawerGroups={drawerGroups} bottom={bottom} showMoreInBottomNav={false} roleLabel={t('principal.role')} />
+  );
 };

@@ -22,6 +22,8 @@ check('pass issued with 8-char code', r.ok && r.data.code.length === 8, r);
 check('code not stored in list', !JSON.stringify(((await ps.getMine(P)) as any).data).includes(r.data.code));
 const STAFF = { schoolId: 'GVS', role: 'TEACHER', userId: 'STF-T-0001' } as any;
 check('parent cannot verify', !((await ps.verifyAtGate(P, r.data.code)) as any).ok);
+check('an admin cannot check passes', !((await ps.verifyAtGate({ schoolId: 'GVS', role: 'ADMIN', userId: 'ACC-L-0002' } as any, r.data.code)) as any).ok);
+check('a teacher of another class cannot check it', !((await ps.verifyAtGate({ schoolId: 'GVS', role: 'TEACHER', userId: 'STF-T-0002' } as any, r.data.code)) as any).ok);
 const ok: any = await ps.verifyAtGate(STAFF, r.data.code.toLowerCase());
 check('gate accepts once', ok.ok && ok.data.status === 'USED' && ok.data.studentName === 'Aarav Sharma', ok);
 check('second use refused', ((await ps.verifyAtGate(STAFF, r.data.code)) as any).code === 'USED');

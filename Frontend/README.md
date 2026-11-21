@@ -40,7 +40,7 @@ The application uses prototype credentials with role-based routing and centraliz
 ### B. Parent Portal (`/parent/*`)
 - `/parent/dashboard`: Action Center with urgent pending dues, overdue homework alert, PTM booking, and notifications.
 - `/parent/overview`: Single-ward academic standing, subject marks, and mentor notes for Aarav Sharma.
-- `/parent/fees`: 4-instalment fee breakdown, partial payment entry, transport fee add-on, and mock checkout.
+- `/parent/fees`: fee breakdown per instalment and academic year, recorded receipts (view / print) and how to pay at the school counter. No in-app payment.
 - `/parent/leave`: Student medical & personal leave request submission.
 - `/parent/transport`: Route 14 radar tracking, driver contact, and Route 7 transfer request.
 - `/parent/complaints`: Grievance submission, administrative responses, and parent resolution sign-off.

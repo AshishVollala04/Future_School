@@ -6,16 +6,20 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Megaphone } from 'lucide-react';
 
-/** One swipeable quick card. `alert` shows the orange dot and colours the status line. */
-export const QuickCard: React.FC<{ to: string; icon: React.ReactNode; tint: string; title: string; status: string; alert?: boolean }> = ({
+/**
+ * One quick card. `alert` shows the orange dot and colours the status line.
+ * Default: fixed width for a swipeable row on phones. `fill`: fills its grid cell (fixed grids, e.g. 2×2).
+ */
+export const QuickCard: React.FC<{ to: string; icon: React.ReactNode; tint: string; title: string; status: string; alert?: boolean; fill?: boolean }> = ({
   to,
   icon,
   tint,
   title,
   status,
-  alert
+  alert,
+  fill
 }) => (
-  <Link to={to} className="lift snap-start shrink-0 w-40 md:w-auto rounded-3xl bg-white shadow-card border border-slate-100 p-4 relative">
+  <Link to={to} className={`lift rounded-3xl bg-white shadow-card border border-slate-100 p-4 relative min-w-0 ${fill ? 'block w-full h-full' : 'snap-start shrink-0 w-40 md:w-auto'}`}>
     {alert && <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-orange-500" aria-hidden="true" />}
     <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${tint}`}>{icon}</span>
     <span className="block mt-3 text-sm font-bold text-slate-900">{title}</span>

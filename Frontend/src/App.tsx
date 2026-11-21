@@ -94,11 +94,13 @@ const TeacherSignInPin = React.lazy(() => import('./modules/teacher/app/TeacherS
 const TeacherMessages = React.lazy(() => import('./modules/teacher/app/TeacherMessagesAndHomework').then(m => ({ default: m.TeacherMessages })));
 const TeacherHomework = React.lazy(() => import('./modules/teacher/app/TeacherMessagesAndHomework').then(m => ({ default: m.TeacherHomework })));
 const TeacherNotices = React.lazy(() => import('./modules/teacher/app/TeacherNotices').then(m => ({ default: m.TeacherNotices })));
+const TeacherGateCheck = React.lazy(() => import('./modules/teacher/app/TeacherGateCheck').then(m => ({ default: m.TeacherGateCheck })));
 const TeacherHallTicketRelease = React.lazy(() => import('./modules/teacher/TeacherHallTicketRelease').then(m => ({ default: m.TeacherHallTicketRelease })));
 
 // === LAZY: Principal Modules ===
 const PrincipalLayout = React.lazy(() => import('./modules/principal/app/PrincipalLayout').then(m => ({ default: m.PrincipalLayout })));
 const PrincipalHome = React.lazy(() => import('./modules/principal/app/PrincipalHome').then(m => ({ default: m.PrincipalHome })));
+const PrincipalAcademics = React.lazy(() => import('./modules/principal/app/PrincipalAcademics').then(m => ({ default: m.PrincipalAcademics })));
 const PrincipalRequests = React.lazy(() => import('./modules/principal/app/PrincipalRequests').then(m => ({ default: m.PrincipalRequests })));
 const PrincipalCorrections = React.lazy(() => import('./modules/principal/app/PrincipalCorrectionsAndLeave').then(m => ({ default: m.PrincipalCorrections })));
 const PrincipalTeacherLeave = React.lazy(() => import('./modules/principal/app/PrincipalCorrectionsAndLeave').then(m => ({ default: m.PrincipalTeacherLeave })));
@@ -121,7 +123,6 @@ const AdminAlerts = React.lazy(() => import('./modules/admin/app/AdminAlerts').t
 const AdminUdiseExport = React.lazy(() => import('./modules/admin/app/AdminUdiseExport').then(m => ({ default: m.AdminUdiseExport })));
 const AdminStudents = React.lazy(() => import('./modules/admin/app/AdminStudents').then(m => ({ default: m.AdminStudents })));
 const AdminAcademicYear = React.lazy(() => import('./modules/admin/app/AdminAcademicYear').then(m => ({ default: m.AdminAcademicYear })));
-const AdminGateCheck = React.lazy(() => import('./modules/admin/app/AdminGateCheck').then(m => ({ default: m.AdminGateCheck })));
 
 // === LAZY: Platform Admin Modules ===
 const PlatformDashboard = React.lazy(() =>
@@ -254,6 +255,7 @@ export default function App() {
                 <Route path="messages" element={<TeacherMessages />} />
                 <Route path="homework" element={<TeacherHomework />} />
                 <Route path="notices" element={<TeacherNotices />} />
+                <Route path="gate" element={<TeacherGateCheck />} />
                 <Route path="*" element={<Navigate to="/teacher/today" replace />} />
               </Route>
 
@@ -270,6 +272,7 @@ export default function App() {
               >
                 <Route index element={<Navigate to="/principal/home" replace />} />
                 <Route path="home" element={<PrincipalHome />} />
+                <Route path="academics" element={<PrincipalAcademics />} />
                 <Route path="report-cards" element={<PrincipalReportCardApprovals />} />
                 <Route path="corrections" element={<PrincipalCorrections />} />
                 <Route path="teacher-leave" element={<PrincipalTeacherLeave />} />
@@ -300,7 +303,6 @@ export default function App() {
                 <Route path="complaints" element={<AdminComplaints />} />
                 <Route path="staff-access" element={<AdminStaffAccess />} />
                 <Route path="audit" element={<AdminAudit />} />
-                <Route path="gate" element={<AdminGateCheck />} />
                 <Route path="overview" element={<OwnerDashboard />} />
                 <Route path="alerts" element={<AdminAlerts />} />
                 <Route path="udise" element={<AdminUdiseExport />} />

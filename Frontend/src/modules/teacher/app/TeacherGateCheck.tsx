@@ -1,4 +1,7 @@
-/** School gate: check an early-pickup pass code. A valid code is accepted once and then marked used. */
+/**
+ * Class Teacher: check an early-pickup pass code for a child in your class. A valid code is accepted
+ * once and then marked used. The server refuses passes for other classes (and Admins do not check passes).
+ */
 import React, { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
@@ -6,7 +9,7 @@ import { pickupService, PickupPassView } from '../../../services/pickupService';
 import { Panel } from '../../../components/common/States';
 import { ErrorBox, PrimaryButton, inputClass } from '../../auth/authUi';
 
-export const AdminGateCheck: React.FC = () => {
+export const TeacherGateCheck: React.FC = () => {
   const scope = useScope();
   const [code, setCode] = useState('');
   const [ok, setOk] = useState<PickupPassView | null>(null);
@@ -29,7 +32,7 @@ export const AdminGateCheck: React.FC = () => {
     <div className="space-y-4 max-w-md">
       <div>
         <h1 className="text-xl font-bold">Pickup gate check</h1>
-        <p className="text-sm text-slate-600">Enter the code shown by the person collecting a child. Each code works once.</p>
+        <p className="text-sm text-slate-600">Enter the code shown by the person collecting a child from your class. Each code works once.</p>
       </div>
       <form onSubmit={check} className="space-y-3">
         <input value={code} onChange={e => setCode(e.target.value.toUpperCase().slice(0, 8))} placeholder="8-character code" aria-label="Pass code"
