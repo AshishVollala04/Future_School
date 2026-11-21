@@ -80,20 +80,36 @@ public class LeaveSeed {
 
     public void seedGvs() {
         timetables();
-        if (studentLeaves.count() > 0) return;
         String sid = TenantContext.require();
-        studentLeaves.save(StudentLeave.builder().id("LV-" + sid + "-1").studentId("GVS-2027-0001").classId("GVS-10-A").fromDate(days(1)).toDate(days(1))
+        studentLeaves.findById("LV-" + sid + "-1").ifPresentOrElse(l -> {
+            l.setFromDate(days(1));
+            l.setToDate(days(1));
+            studentLeaves.save(l);
+        }, () -> studentLeaves.save(StudentLeave.builder().id("LV-" + sid + "-1").studentId("GVS-2027-0001").classId("GVS-10-A").fromDate(days(1)).toDate(days(1))
                 .kind("MEDICAL_APPOINTMENT").reason("Eye check-up at the hospital in the morning.").requestedByGuardianId("GRD-0001")
-                .requestedAt(days(-1) + "T20:10:00+05:30").status("PENDING").build());
-        studentLeaves.save(StudentLeave.builder().id("LV-" + sid + "-2").studentId("GVS-2027-0006").classId("GVS-10-A").fromDate(days(0)).toDate(days(1))
+                .requestedAt(days(-1) + "T20:10:00+05:30").status("PENDING").build()));
+
+        studentLeaves.findById("LV-" + sid + "-2").ifPresentOrElse(l -> {
+            l.setFromDate(days(0));
+            l.setToDate(days(1));
+            studentLeaves.save(l);
+        }, () -> studentLeaves.save(StudentLeave.builder().id("LV-" + sid + "-2").studentId("GVS-2027-0006").classId("GVS-10-A").fromDate(days(0)).toDate(days(1))
                 .kind("FAMILY").reason("Family function out of town.").requestedByGuardianId("GRD-9006").requestedAt(days(-3) + "T18:00:00+05:30")
-                .status("APPROVED").decidedBy("STF-T-0001").decidedByName("Sarah Jenkins").decidedAt(days(-2) + "T09:00:00+05:30").decisionNote("Approved.").build());
-        teacherLeaves.save(TeacherLeaveRequest.builder().id("TL-" + sid + "-1").staffId("STF-T-0002").staffName("Raghavan Nair").fromDate(days(8)).toDate(days(9))
-                .kind("TRAINING").reason("SCERT mathematics teacher training at Hyderabad.").status("PENDING").substitutionJson("[]").build());
-        // Approved: the Admin still has to arrange substitutes (Flow 6).
-        teacherLeaves.save(TeacherLeaveRequest.builder().id("TL-" + sid + "-2").staffId("STF-T-0003").staffName("K. Lakshmi")
-                .fromDate(nextSchoolDay(1)).toDate(nextSchoolDay(1)).kind("SICK").reason("Medical appointment.").status("APPROVED")
-                .decidedBy("ACC-L-0001").decidedAt(days(-1) + "T16:00:00+05:30").substitutionJson("[]").build());
+                .status("APPROVED").decidedBy("STF-T-0001").decidedByName("Sarah Jenkins").decidedAt(days(-2) + "T09:00:00+05:30").decisionNote("Approved.").build()));
+
+        if (teacherLeaves.count() == 0) {
+            teacherLeaves.save(TeacherLeaveRequest.builder().id("TL-" + sid + "-1").staffId("STF-T-0002").staffName("Raghavan Nair").fromDate(days(8)).toDate(days(9))
+                    .kind("TRAINING").reason("SCERT mathematics teacher training at Hyderabad.").status("PENDING").substitutionJson("[]").build());
+            teacherLeaves.save(TeacherLeaveRequest.builder().id("TL-" + sid + "-2").staffId("STF-T-0003").staffName("K. Lakshmi")
+                    .fromDate(nextSchoolDay(1)).toDate(nextSchoolDay(1)).kind("SICK").reason("Medical appointment.").status("APPROVED")
+                    .decidedBy("ACC-L-0001").decidedAt(days(-1) + "T16:00:00+05:30").substitutionJson("[]").build());
+        } else {
+            teacherLeaves.findById("TL-" + sid + "-2").ifPresent(tl -> {
+                tl.setFromDate(nextSchoolDay(1));
+                tl.setToDate(nextSchoolDay(1));
+                teacherLeaves.save(tl);
+            });
+        }
     }
 
     public void seedSjm() {

@@ -74,6 +74,7 @@ public class TeacherService {
                     .password(passwordEncoder.encode(pwd))
                     .name(saved.getName())
                     .email(saved.getEmail())
+                    .mobile(saved.getPhone() != null && !saved.getPhone().isBlank() ? saved.getPhone().replaceAll("\\D", "").replaceFirst("^91(?=\\d{10}$)", "") : null)
                     .role(UserRole.TEACHER)
                     .teacherId(saved.getTeacherId())
                     .status("Active")
@@ -108,6 +109,9 @@ public class TeacherService {
                 .ifPresent(acc -> {
                     acc.setName(updated.getName());
                     acc.setEmail(updated.getEmail());
+                    if (updated.getPhone() != null) {
+                        acc.setMobile(updated.getPhone().replaceAll("\\D", "").replaceFirst("^91(?=\\d{10}$)", ""));
+                    }
                     acc.setActive(updated.isActive());
                     userAccountRepository.save(acc);
                 });

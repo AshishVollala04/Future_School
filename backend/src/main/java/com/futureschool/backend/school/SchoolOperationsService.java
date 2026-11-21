@@ -432,6 +432,7 @@ public class SchoolOperationsService {
                         .name(name)
                         .dob(blankToNull(col(cols, idx, "dob", "dateofbirth")))
                         .gender(blankToNull(col(cols, idx, "gender")))
+                        .bloodGroup(blankToNull(col(cols, idx, "bloodgroup", "blood")))
                         .classId(sc.getId())
                         .className(sc.getName())
                         .section(sc.getSection())

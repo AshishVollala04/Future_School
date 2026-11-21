@@ -29,6 +29,7 @@ export interface StudentProfileDTO {
   subCaste?: string;
   religion?: string;
   motherTongue?: string;
+  bloodGroup?: string;
   fatherName?: string;
   motherName?: string;
   mediumOfInstruction?: string;

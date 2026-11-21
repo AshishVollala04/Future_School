@@ -71,8 +71,8 @@ public class SchoolController {
     @GetMapping("/api/admin/students/import-template")
     @Operation(summary = "Downloadable CSV column header and sample row for student onboarding")
     public ResponseEntity<?> importTemplate() {
-        String headers = "Admission No,Student Name,Date of Birth,Gender,Class,Section,Roll No,Parent Name,Parent Mobile,Parent Email,Aadhaar No,APAAR ID,Social Category,Religion,Mother Tongue,Medium of Instruction,Address,District,Mandal,Pincode,Annual Fee";
-        String sample = "ADM-2026-101,Aarav Sharma,2012-05-14,Male,10,A,01,Rajesh Sharma,9876543210,rajesh@example.com,123456789012,APAAR12345678,General,Hindu,Telugu,English,Plot 12 Kompally,Medchal-Malkajgiri,Quthbullapur,500014,48000";
+        String headers = "Admission No,Student Name,Class,Section,Roll No,Date of Birth,Gender,Blood Group,Parent Mobile,Father Name,Mother Name,Annual Fee,Aadhaar No,APAAR ID,Social Category,Religion,Mother Tongue,Medium of Instruction,Address,District,Mandal,Pincode";
+        String sample = "ADM-2026-101,Aarav Sharma,10,A,01,2012-05-14,Male,O+,9876543210,Rajesh Sharma,Priya Sharma,48000,123456789012,APAAR12345678,General,Hindu,Telugu,English,Plot 12 Kompally,Medchal-Malkajgiri,Quthbullapur,500014";
         return ResponseEntity.ok(Map.of("headers", headers, "sampleCsv", headers + "\n" + sample));
     }
 
