@@ -156,16 +156,16 @@ export const ParentHome: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 1. Quick cards: overlap the header wave a little, like the reference */}
-      <div className="-mt-6 -mx-4 px-4 flex gap-3 overflow-x-auto no-scrollbar snap-x pb-1 relative z-10 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:overflow-visible">
+      {/* 1. Quick cards: 2x2 grid on mobile/tablet, 4-col on desktop */}
+      <div className="-mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
         <QuickCard to="/parent/academics?tab=homework" icon={<BookOpenCheck className="w-6 h-6" />} tint="bg-blue-50 text-blue-700"
-          title={t('parent.ui.homework')} status={pendingHw ? t('parent.ui.homeworkPending', { count: pendingHw }) : t('parent.ui.homeworkDone')} alert={overdueHw.length > 0} />
+          title={t('parent.ui.homework')} status={pendingHw ? t('parent.ui.homeworkPending', { count: pendingHw }) : t('parent.ui.homeworkDone')} alert={overdueHw.length > 0} fill />
         <QuickCard to="/parent/fees" icon={<IndianRupee className="w-6 h-6" />} tint="bg-indigo-50 text-indigo-700"
-          title={t('parent.ui.feePayment')} status={feeStatus} alert={Boolean(f && f.overdueAmount > 0)} />
+          title={t('parent.ui.feePayment')} status={feeStatus} alert={Boolean(f && f.overdueAmount > 0)} fill />
         <QuickCard to="/parent/academics?tab=exams" icon={<Ticket className="w-6 h-6" />} tint="bg-sky-50 text-sky-700"
-          title={t('parent.ui.hallTicket')} status={ticketStatus} alert={Boolean(nextTicket && !nextTicket.available && nextTicket.feeClearance === 'PENDING')} />
+          title={t('parent.ui.hallTicket')} status={ticketStatus} alert={Boolean(nextTicket && !nextTicket.available && nextTicket.feeClearance === 'PENDING')} fill />
         <QuickCard to="/parent/attendance" icon={<CalendarCheck className="w-6 h-6" />} tint="bg-emerald-50 text-emerald-700"
-          title={t('parent.ui.attendance')} status={attendanceStatus} />
+          title={t('parent.ui.attendance')} status={attendanceStatus} fill />
       </div>
 
       {/* 2. Notice board (red, right under the quick cards) */}
