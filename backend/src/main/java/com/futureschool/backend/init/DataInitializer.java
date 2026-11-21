@@ -121,7 +121,7 @@ public class DataInitializer implements CommandLineRunner {
             memberships.save(m);
         });
         member("MEM-L-0001", gvsPrincipal, GVS, UserRole.PRINCIPAL, "Principal", null);
-        member("MEM-L-0002", sundaram, GVS, UserRole.ADMIN, "Administrator · Finance & Admissions", "FINANCE,ADMISSIONS,SECURITY,REPORTS");
+        member("MEM-L-0002", sundaram, GVS, UserRole.ADMIN, "Super Administrator · Full Access", "FINANCE,ADMISSIONS,ACADEMIC_OPS,TRANSPORT,COMPLAINTS,SECURITY,REPORTS");
         member("MEM-L-0003", priya, GVS, UserRole.ADMIN, "Administrator · Operations", "ACADEMIC_OPS,TRANSPORT,COMPLAINTS,REPORTS");
         member("MEM-L-0004", sjmPrincipal, SJM, UserRole.PRINCIPAL, "Principal", null);
 
@@ -169,9 +169,14 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void member(String id, UserAccount a, String school, UserRole role, String title, String permissions) {
-        if (!memberships.existsById(id) && !memberships.existsByAccountIdAndSchoolIdAndRole(a.getId(), school, role)) {
+        SchoolMembership m = memberships.findById(id).orElse(null);
+        if (m == null) {
             memberships.save(SchoolMembership.builder().id(id).accountId(a.getId()).schoolId(school).role(role)
                     .title(title).permissions(permissions).active(true).build());
+        } else {
+            m.setPermissions(permissions);
+            m.setTitle(title);
+            memberships.save(m);
         }
     }
 

@@ -122,7 +122,7 @@ export const MOCK_LEADERSHIP: MockLeadershipAccount[] = [
     accountId: 'ACC-L-0002', name: 'S. Sundaram', email: 'admin@greenwoodvalley.edu.in', status: 'ACTIVE',
     password: 'Greenwood@2026',
     idpLinks: [{ provider: 'GOOGLE', subject: 'g-sub-104882913370001' }],
-    memberships: [{ membershipId: 'MEM-L-0002', role: 'ADMIN', schoolId: 'GVS', title: 'Administrator · Finance & Admissions', permissions: ['FINANCE', 'ADMISSIONS', 'SECURITY', 'REPORTS'] }]
+    memberships: [{ membershipId: 'MEM-L-0002', role: 'ADMIN', schoolId: 'GVS', title: 'Super Administrator · Full Access', permissions: ['FINANCE', 'ADMISSIONS', 'ACADEMIC_OPS', 'TRANSPORT', 'COMPLAINTS', 'SECURITY', 'REPORTS'] }]
   },
   {
     accountId: 'ACC-L-0003', name: 'Priya Narayanan', email: 'office@greenwoodvalley.edu.in', status: 'ACTIVE',
