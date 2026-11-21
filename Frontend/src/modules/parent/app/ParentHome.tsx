@@ -156,8 +156,18 @@ export const ParentHome: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 1. Quick cards: 2x2 grid on mobile/tablet, 4-col on desktop */}
-      <div className="-mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
+      {/* 1. Notice board shifted to the very top */}
+      <NoticeBoardCard
+        className="-mt-6 relative z-10"
+        to="/parent/notices"
+        heading={t('parent.ui.noticeBoard')}
+        viewAll={t('parent.ui.viewAll')}
+        emptyText={t('parent.ui.noticesNone')}
+        latest={latest ? { title: latest.title, body: latest.body, date: formatDate(latest.publishedAt.slice(0, 10), lang) } : null}
+      />
+
+      {/* 2. Quick cards: 2x2 grid on mobile/tablet, 4-col on desktop */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 relative z-10">
         <QuickCard to="/parent/academics?tab=homework" icon={<BookOpenCheck className="w-6 h-6" />} tint="bg-blue-50 text-blue-700"
           title={t('parent.ui.homework')} status={pendingHw ? t('parent.ui.homeworkPending', { count: pendingHw }) : t('parent.ui.homeworkDone')} alert={overdueHw.length > 0} fill />
         <QuickCard to="/parent/fees" icon={<IndianRupee className="w-6 h-6" />} tint="bg-indigo-50 text-indigo-700"
@@ -167,15 +177,6 @@ export const ParentHome: React.FC = () => {
         <QuickCard to="/parent/attendance" icon={<CalendarCheck className="w-6 h-6" />} tint="bg-emerald-50 text-emerald-700"
           title={t('parent.ui.attendance')} status={attendanceStatus} fill />
       </div>
-
-      {/* 2. Notice board (red, right under the quick cards) */}
-      <NoticeBoardCard
-        to="/parent/notices"
-        heading={t('parent.ui.noticeBoard')}
-        viewAll={t('parent.ui.viewAll')}
-        emptyText={t('parent.ui.noticesNone')}
-        latest={latest ? { title: latest.title, body: latest.body, date: formatDate(latest.publishedAt.slice(0, 10), lang) } : null}
-      />
 
       {/* 3. Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">

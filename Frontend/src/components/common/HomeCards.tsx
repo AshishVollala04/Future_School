@@ -34,8 +34,9 @@ export const NoticeBoardCard: React.FC<{
   viewAll: string;
   emptyText: string;
   latest?: { title: string; body: string; date: string } | null;
-}> = ({ to, heading, viewAll, emptyText, latest }) => (
-  <Link to={to} className="lift block rounded-3xl bg-gradient-to-br from-rose-600 via-red-600 to-red-700 text-white p-5 shadow-float ring-1 ring-red-700/30">
+  className?: string;
+}> = ({ to, heading, viewAll, emptyText, latest, className }) => (
+  <Link to={to} className={`lift block rounded-3xl bg-gradient-to-br from-rose-600 via-red-600 to-red-700 text-white p-5 shadow-float ring-1 ring-red-700/30 ${className ?? ''}`}>
     <span className="flex items-center justify-between">
       <span className="font-bold flex items-center gap-2"><Megaphone className="w-4 h-4" />{heading}</span>
       <span className="text-sm text-red-100 flex items-center">{viewAll} <ChevronRight className="w-4 h-4" /></span>
