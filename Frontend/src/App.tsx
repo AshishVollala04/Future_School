@@ -153,17 +153,6 @@ const PlatformSupportCases = React.lazy(() =>
   import('./modules/platformAdmin/PlatformGovernance').then(m => ({ default: m.PlatformSupportCases }))
 );
 
-// === LAZY: Public Marketing & Legal Pages ===
-const LandingPage = React.lazy(() =>
-  import('./modules/public/LandingPage').then(m => ({ default: m.LandingPage }))
-);
-const PrivacyPolicy = React.lazy(() =>
-  import('./modules/public/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy }))
-);
-const TermsOfService = React.lazy(() =>
-  import('./modules/public/TermsOfService').then(m => ({ default: m.TermsOfService }))
-);
-
 export default function App() {
   return (
     <BrowserRouter>
@@ -172,15 +161,13 @@ export default function App() {
         <TenantProvider>
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              {/* Public Marketing & Legal Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-
               {/* Public Authentication Route */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/drive/:token" element={<DriverTrackingPage />} />
               <Route path="/login/idp-callback" element={<IdpCallback />} />
+
+              {/* Root Redirect */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
 
               {/* ========================================================= */}
               {/* 1. STUDENT ROUTES (Protected)                             */}
