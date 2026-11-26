@@ -25,6 +25,7 @@ type Tab = 'PARENT' | 'TEACHER' | 'STAFF';
 export const homePathFor = (role: string) => `/${role.toLowerCase()}/dashboard`;
 
 import { APP_VARIANT, allowsRole } from '../../app/appVariant';
+import { USE_BACKEND } from '../../app/backendConfig';
 
 export const LoginPage: React.FC = () => {
   const { t } = useTranslation();
@@ -41,6 +42,11 @@ export const LoginPage: React.FC = () => {
   const [invitation, setInvitation] = useState<InvitationView | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteLoading, setInviteLoading] = useState(Boolean(inviteToken));
+
+  useEffect(() => {
+    // Wake the Render free-tier container while the user enters their mobile/email credentials.
+    if (USE_BACKEND) void authService.getIdpProviders();
+  }, []);
 
   useEffect(() => {
     if (!inviteToken) return;

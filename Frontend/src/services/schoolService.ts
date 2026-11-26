@@ -1,4 +1,5 @@
 import { authService } from './authService';
+import { API_BASE_URL } from '../app/backendConfig';
 import {
   StudentProfile,
   AttendanceDay,
@@ -195,7 +196,7 @@ export const SchoolService = {
   // Exam Results - live sync from Spring Boot
   async getExamResults(): Promise<ExamRecord[]> {
     try {
-      const res = await fetch('/api/marks/student/GVS-2027-0001', {
+      const res = await fetch(`${API_BASE_URL}/api/marks/student/GVS-2027-0001`, {
         headers: getAuthHeader()
       });
       if (res.ok) {
@@ -233,7 +234,7 @@ export const SchoolService = {
   async getFees() {
     const local = getLocal(STORAGE_KEYS.FEES, INITIAL_FEES);
     try {
-      const res = await fetch('/api/fees/student/GVS-2027-0001', {
+      const res = await fetch(`${API_BASE_URL}/api/fees/student/GVS-2027-0001`, {
         headers: getAuthHeader()
       });
       if (res.ok) {
@@ -275,7 +276,7 @@ export const SchoolService = {
 
     // Persist to live PostgreSQL database via Spring Boot
     try {
-      await fetch('/api/fees/collect', {
+      await fetch(`${API_BASE_URL}/api/fees/collect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -347,7 +348,7 @@ export const SchoolService = {
   // Teacher roster - live sync
   async getClassRoster() {
     try {
-      const res = await fetch('/api/students/class/class-10-a', {
+      const res = await fetch(`${API_BASE_URL}/api/students/class/class-10-a`, {
         headers: getAuthHeader()
       });
       if (res.ok) {

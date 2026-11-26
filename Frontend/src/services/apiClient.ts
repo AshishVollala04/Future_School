@@ -5,6 +5,7 @@
  */
 
 import { authService } from './authService';
+import { API_BASE_URL } from '../app/backendConfig';
 
 function getToken(): string | null {
   return authService.getAccessToken();
@@ -27,8 +28,9 @@ function handleUnauthorized(): void {
 }
 
 async function request<T>(url: string, options: RequestInit): Promise<T | null> {
+  const target = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
   try {
-    const res = await fetch(url, options);
+    const res = await fetch(target, options);
     if (res.status === 401) {
       handleUnauthorized();
       return null;
