@@ -2,13 +2,14 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace/app
 
-# Cache Maven dependencies
+# Use Google Cloud Asia Maven Central CDN mirror so shared cloud builders never hit 429 rate limits
+COPY .mvn/docker-settings.xml .mvn/docker-settings.xml
 COPY pom.xml .
-RUN mvn -B -ntp dependency:resolve
+RUN mvn -B -ntp -s .mvn/docker-settings.xml dependency:resolve
 
 # Build application JAR
 COPY src src
-RUN mvn -B -ntp clean package -DskipTests
+RUN mvn -B -ntp -s .mvn/docker-settings.xml clean package -DskipTests
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-jammy
