@@ -1,17 +1,14 @@
 # Multi-stage Dockerfile for FutureSchool Spring Boot Backend
-FROM eclipse-temurin:21-jdk-jammy AS build
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace/app
 
-# Cache dependencies
-COPY mvnw .
-COPY .mvn .mvn
+# Cache Maven dependencies
 COPY pom.xml .
-RUN sed -i 's/\r$//' ./mvnw && chmod +x ./mvnw
-RUN ./mvnw dependency:go-offline -B
+RUN mvn -B -ntp dependency:resolve
 
 # Build application JAR
 COPY src src
-RUN ./mvnw clean package -DskipTests
+RUN mvn -B -ntp clean package -DskipTests
 
 # Runtime stage
 FROM eclipse-temurin:21-jre-jammy
