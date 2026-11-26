@@ -33,7 +33,8 @@ export const TeacherAttendanceRegister: React.FC = () => {
   const [session, setSession] = useState<AttendanceSession>(new Date().getHours() >= 12 ? 'AFTERNOON' : 'MORNING');
   const reg = useQuery(
     () => (ct ? attendanceService.getRegister(scope, ct.id, date, session) : Promise.resolve({ ok: true as const, data: null })),
-    [scope.schoolId, ct?.id, date, session]
+    [scope.schoolId, ct?.id, date, session],
+    { autoRefresh: false }
   );
   const [marks, setMarks] = useState<Record<string, AttendanceMark>>({});
   const [reason, setReason] = useState('');

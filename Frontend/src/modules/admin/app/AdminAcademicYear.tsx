@@ -125,7 +125,7 @@ const PrepareYear: React.FC<{ current: AcademicYearView; onDone: () => void }> =
 // ------------------------------------------------------------------ 2-4. plan a year
 
 const YearPlan: React.FC<{ yearId: string; canPlan: boolean; canFees: boolean; onStarted: () => void }> = ({ yearId, canPlan, canFees, onStarted }) => {
-  const draft = useQuery(() => rosterService.draft(yearId), [yearId]);
+  const draft = useQuery(() => rosterService.draft(yearId), [yearId], { autoRefresh: false });
   if (draft.status === 'loading') return <LoadingBlock />;
   if (draft.status === 'error') return <ErrorState message={draft.error} onRetry={draft.reload} />;
   const d = draft.data;

@@ -43,7 +43,7 @@ export interface StaffShellProps {
 export const StaffShell: React.FC<StaffShellProps> = ({ groups, bottom, roleLabel, drawerGroups, showMoreInBottomNav = true, headerExtra }) => {
   const { t } = useTranslation();
   const { session, currentUser, logout } = useAuth();
-  const { state: tenant, school, boardProfile } = useTenant();
+  const { state: tenant, school, boardProfile, reload: reloadTenant } = useTenant();
   const navigate = useNavigate();
   const [drawer, setDrawer] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
@@ -114,7 +114,7 @@ export const StaffShell: React.FC<StaffShellProps> = ({ groups, bottom, roleLabe
       <div className="flex max-w-[1400px] mx-auto">
         <aside className="hidden lg:block w-64 shrink-0 border-r border-slate-200 bg-white min-h-[calc(100dvh-4rem)] p-3">{nav(groups)}</aside>
         <main className="flex-1 min-w-0 p-4 sm:p-6 pb-28 lg:pb-8" key={`${session?.role}:${session?.schoolId}`}>
-          {tenant.status === 'loading' ? <LoadingBlock /> : tenant.status === 'error' ? <ErrorState message={tenant.error} /> : (
+          {tenant.status === 'loading' ? <LoadingBlock /> : tenant.status === 'error' ? <ErrorState message={tenant.error} onRetry={reloadTenant} /> : (
             <div key={location.pathname} className="fs-rise"><Outlet /></div>
           )}
         </main>

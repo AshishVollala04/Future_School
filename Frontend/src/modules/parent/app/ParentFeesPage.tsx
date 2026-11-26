@@ -27,8 +27,9 @@ export const ParentFeesPage: React.FC = () => {
   const scope = useScope();
   const { school } = useTenant();
   const key = [scope.schoolId, scope.studentId];
-  const summary = useQuery(() => feeService.getSummary(scope), key);
-  const history = useQuery(() => feeService.listPayments(scope), key);
+  const live = { refreshOnDataChange: true, refreshIntervalMs: 30_000 };
+  const summary = useQuery(() => feeService.getSummary(scope), key, live);
+  const history = useQuery(() => feeService.listPayments(scope), key, live);
   const [tab, setTab] = React.useState<'dues' | 'history'>('dues');
   const [receipt, setReceipt] = React.useState<Payment | null>(null);
   const lang = i18n.language;

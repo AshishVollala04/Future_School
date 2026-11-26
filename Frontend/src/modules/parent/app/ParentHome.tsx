@@ -61,15 +61,16 @@ export const ParentHome: React.FC = () => {
   const { t, i18n } = useTranslation();
   const scope = useScope();
   const key = [scope.schoolId, scope.studentId];
-  const fees = useQuery(() => feeService.getSummary(scope), key);
-  const homework = useQuery(() => academicsService.getHomework(scope), key);
-  const timetable = useQuery(() => academicsService.getTimetable(scope), key);
-  const notices = useQuery(() => communicationService.getNotices(scope), key);
-  const consents = useQuery(() => communicationService.getConsents(scope), key);
-  const meetings = useQuery(() => communicationService.getMeetings(scope), key);
-  const tickets = useQuery(() => hallTicketService.getForStudent(scope), key);
-  const attendance = useQuery(() => academicsService.getAttendance(scope, 30), key);
-  const results = useQuery(() => academicsService.getPublishedResults(scope), key);
+  const live = { refreshOnDataChange: true, refreshIntervalMs: 60_000 };
+  const fees = useQuery(() => feeService.getSummary(scope), key, live);
+  const homework = useQuery(() => academicsService.getHomework(scope), key, live);
+  const timetable = useQuery(() => academicsService.getTimetable(scope), key, live);
+  const notices = useQuery(() => communicationService.getNotices(scope), key, live);
+  const consents = useQuery(() => communicationService.getConsents(scope), key, live);
+  const meetings = useQuery(() => communicationService.getMeetings(scope), key, live);
+  const tickets = useQuery(() => hallTicketService.getForStudent(scope), key, live);
+  const attendance = useQuery(() => academicsService.getAttendance(scope, 30), key, live);
+  const results = useQuery(() => academicsService.getPublishedResults(scope), key, live);
 
   const core = [fees, homework, notices, consents, meetings, tickets];
   const loading = core.some(q => q.status === 'loading');

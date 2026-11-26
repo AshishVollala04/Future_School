@@ -110,7 +110,7 @@ const BranchView: React.FC<{ b: Branch; showName: boolean }> = ({ b, showName })
 
 export const OwnerDashboard: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const q = useQuery(() => ownerService.overview(), []);
+  const q = useQuery(() => ownerService.overview(), [], { refreshOnDataChange: true, refreshIntervalMs: 30_000 });
   const [spinning, setSpinning] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const spinTimer = useRef<number | undefined>(undefined);

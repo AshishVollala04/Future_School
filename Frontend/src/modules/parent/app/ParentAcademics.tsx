@@ -54,7 +54,7 @@ const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const TimetableTab: React.FC = () => {
   const { t } = useTranslation();
   const scope = useScope();
-  const q = useQuery(() => academicsService.getTimetable(scope), [scope.schoolId, scope.studentId]);
+  const q = useQuery(() => academicsService.getTimetable(scope), [scope.schoolId, scope.studentId], { refreshOnDataChange: true, refreshIntervalMs: 60_000 });
   const [day, setDay] = React.useState<number>(Math.min(isoWeekday(), 6));
   if (q.status === 'loading') return <LoadingBlock />;
   if (q.status === 'error') return <ErrorState message={q.error} onRetry={q.reload} />;
@@ -95,7 +95,7 @@ const TimetableTab: React.FC = () => {
 const HomeworkTab: React.FC = () => {
   const { t, i18n } = useTranslation();
   const scope = useScope();
-  const q = useQuery(() => academicsService.getHomework(scope), [scope.schoolId, scope.studentId]);
+  const q = useQuery(() => academicsService.getHomework(scope), [scope.schoolId, scope.studentId], { refreshOnDataChange: true, refreshIntervalMs: 45_000 });
   if (q.status === 'loading') return <LoadingBlock />;
   if (q.status === 'error') return <ErrorState message={q.error} onRetry={q.reload} />;
   if (q.data.length === 0) return <EmptyState title={t('parent.academics.noHomework')} />;
@@ -405,8 +405,9 @@ const ExamsTab: React.FC = () => {
   const { t, i18n } = useTranslation();
   const scope = useScope();
   const { school } = useTenant();
-  const tickets = useQuery(() => hallTicketService.getForStudent(scope), [scope.schoolId, scope.studentId]);
-  const results = useQuery(() => academicsService.getPublishedResults(scope), [scope.schoolId, scope.studentId]);
+  const live = { refreshOnDataChange: true, refreshIntervalMs: 45_000 };
+  const tickets = useQuery(() => hallTicketService.getForStudent(scope), [scope.schoolId, scope.studentId], live);
+  const results = useQuery(() => academicsService.getPublishedResults(scope), [scope.schoolId, scope.studentId], live);
   const [showHistory, setShowHistory] = React.useState(false);
 
   return (

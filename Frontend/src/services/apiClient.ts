@@ -31,15 +31,14 @@ async function request<T>(url: string, options: RequestInit): Promise<T | null> 
   const target = url.startsWith('/') ? `${API_BASE_URL}${url}` : url;
   try {
     const res = await fetch(target, options);
-    if (res.status === 401) {
+    const text = await res.text();
+    const data = text ? JSON.parse(text) : null;
+    if (res.status === 401 && !data?.code) {
       handleUnauthorized();
       return null;
     }
     if (!res.ok) return null;
-    // Handle empty responses (e.g. 204 No Content)
-    const text = await res.text();
-    if (!text) return null;
-    return JSON.parse(text) as T;
+    return data as T;
   } catch {
     // Network error or JSON parse failure — graceful degradation
     return null;

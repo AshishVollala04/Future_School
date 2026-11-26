@@ -23,11 +23,13 @@ export const AdminFeeDesk: React.FC = () => {
   const [term, setTerm] = useState('');
   const [applied, setApplied] = useState('');
   const [studentId, setStudentId] = useState<string | null>(null);
-  const list = useQuery(() => feeDeskService.search(scope, applied), [scope.schoolId, applied]);
-  const acct = useQuery(() => (studentId ? feeDeskService.getAccount(scope, studentId) : Promise.resolve({ ok: true as const, data: null })), [scope.schoolId, studentId]);
+  const live = { refreshOnDataChange: true, refreshIntervalMs: 30_000 };
+  const list = useQuery(() => feeDeskService.search(scope, applied), [scope.schoolId, applied], live);
+  const acct = useQuery(() => (studentId ? feeDeskService.getAccount(scope, studentId) : Promise.resolve({ ok: true as const, data: null })), [scope.schoolId, studentId], live);
   const alerts = useQuery<FeePaymentAlert[]>(
     () => (feeDeskService.getPaymentAlerts ? feeDeskService.getPaymentAlerts(scope) : Promise.resolve({ ok: true as const, data: [] })),
-    [scope.schoolId]
+    [scope.schoolId],
+    live
   );
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');

@@ -163,7 +163,7 @@ export const SheetGrid: React.FC<{ view: SheetView; values?: Record<string, { in
 
 const SheetEditor: React.FC<{ sheetId: string; onBack: () => void }> = ({ sheetId, onBack }) => {
   const scope = useScope();
-  const q = useQuery(() => marksService.getSheet(scope, sheetId), [scope.schoolId, sheetId]);
+  const q = useQuery(() => marksService.getSheet(scope, sheetId), [scope.schoolId, sheetId], { autoRefresh: false });
   const [values, setValues] = useState<Record<string, { internal: string; external: string }>>({});
   const [busy, setBusy] = useState<'save' | 'submit' | null>(null);
   const [error, setError] = useState<string | null>(null);

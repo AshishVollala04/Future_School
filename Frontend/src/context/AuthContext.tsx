@@ -66,6 +66,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('futureschool:unauthorized', onUnauthorized);
   }, []);
 
+  // Keep open tabs aligned on logout or session changes and drop expired sessions on resume.
+  useEffect(() => {
+    const syncFromStorage = () => {
+      const next = authService.restoreSession();
+      sessionCache.clearAll();
+      setSensitiveActionState(null);
+      setSession(next);
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'fs:auth:session') syncFromStorage();
+    };
+    const checkExpiryOnResume = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (session && Date.now() >= session.expiresAt) syncFromStorage();
+    };
+    window.addEventListener('storage', onStorage);
+    document.addEventListener('visibilitychange', checkExpiryOnResume);
+    window.addEventListener('focus', checkExpiryOnResume);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      document.removeEventListener('visibilitychange', checkExpiryOnResume);
+      window.removeEventListener('focus', checkExpiryOnResume);
+    };
+  }, [session]);
+
   const startSession = useCallback((next: AuthSession) => {
     sessionCache.clearAll();
     setSensitiveActionState(null);

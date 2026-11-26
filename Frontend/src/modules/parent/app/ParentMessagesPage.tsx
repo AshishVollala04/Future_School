@@ -20,7 +20,7 @@ export const ParentMessagesPage: React.FC = () => {
   const { t, i18n } = useTranslation();
   const scope = useScope();
   const key = [scope.schoolId, scope.studentId];
-  const threads = useQuery(() => communicationService.getThreads(scope), key);
+  const threads = useQuery(() => communicationService.getThreads(scope), key, { refreshOnDataChange: true, refreshIntervalMs: 30_000 });
   const recipients = useQuery(() => communicationService.getRecipients(scope), key);
   const [openId, setOpenId] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);

@@ -36,10 +36,18 @@ const TABS = [
 export const ParentShell: React.FC = () => {
   const scope = useScope();
   const { session } = useAuth();
+  const { state: tenant, reload: reloadTenant } = useTenant();
   const trustedSessionRef = React.useRef<string | null>(null);
+  const wasReadyRef = React.useRef(false);
   const pin = useQuery(() => authService.getParentPin(scope), [scope.userId]);
   const ready = pin.status === 'ready' && !(pin.data.setupRequired ?? !pin.data.pinSet);
   const smsSession = Boolean(session?.authMethods.includes('SMS_OTP'));
+  useEffect(() => {
+    if (ready && !wasReadyRef.current && tenant.status === 'error') {
+      reloadTenant();
+    }
+    wasReadyRef.current = ready;
+  }, [ready, tenant.status, reloadTenant]);
   useEffect(() => {
     if (!ready || !smsSession || !session?.sessionId) return;
     if (trustedSessionRef.current === session.sessionId) return;
@@ -49,7 +57,18 @@ export const ParentShell: React.FC = () => {
 
   if (pin.status === 'loading') return <div className="p-6"><LoadingBlock /></div>;
   if (pin.status === 'error') return <div className="p-6"><ErrorState message={pin.error} onRetry={pin.reload} /></div>;
-  if (!ready) return <PinSetupScreen resetting={pin.data.pinSet} save={p => authService.setParentPin(scope, p)} onDone={pin.reload} />;
+  if (!ready) {
+    return (
+      <PinSetupScreen
+        resetting={pin.data.pinSet}
+        save={p => authService.setParentPin(scope, p)}
+        onDone={() => {
+          pin.reload();
+          reloadTenant();
+        }}
+      />
+    );
+  }
   return <ParentApp />;
 };
 
@@ -63,7 +82,7 @@ const HeaderWave: React.FC = () => (
 const ParentApp: React.FC = () => {
   const { t } = useTranslation();
   const { session, currentUser, linkedChildren, switchActiveChild } = useAuth();
-  const { state: tenant, school, boardProfile } = useTenant();
+  const { state: tenant, school, boardProfile, reload: reloadTenant } = useTenant();
   const navigate = useNavigate();
   const location = useLocation();
   const [switching, setSwitching] = useState<string | null>(null);
@@ -172,7 +191,7 @@ const ParentApp: React.FC = () => {
           {tenant.status === 'loading' ? (
             <LoadingBlock />
           ) : tenant.status === 'error' ? (
-            <ErrorState message={tenant.error} />
+            <ErrorState message={tenant.error} onRetry={reloadTenant} />
           ) : (
             <div key={location.pathname} className="fs-rise">
               <Outlet />

@@ -250,7 +250,13 @@ export class ApiAuthService implements AuthService {
       const res = await fetch(`${this.baseUrl}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
-      if (!res.ok) return { ok: false, error: data?.error ?? 'Something went wrong. Please try again.', code: data?.code ?? String(res.status) };
+      if (!res.ok) {
+        if (res.status === 401 && withAuth && !data?.code) {
+          storage.remove(SESSION_KEY);
+          if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('futureschool:unauthorized'));
+        }
+        return { ok: false, error: data?.error ?? 'Something went wrong. Please try again.', code: data?.code ?? String(res.status) };
+      }
       return { ok: true, data: data as T };
     } catch {
       return fail('Cannot reach the FutureSchool server. Check your connection and try again.', 'NETWORK');

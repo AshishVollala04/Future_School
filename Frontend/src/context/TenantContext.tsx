@@ -8,11 +8,12 @@
  * Provides: school profile (name, branding, academic year) + board profile.
  * Applies branding as CSS variables (--fs-primary, --fs-accent).
  */
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { SchoolProfile } from '../types/school';
 import { schoolProfileService } from '../services/schoolProfileService';
 import { BoardProfile, getBoardProfile } from '../services/boardProfileService';
+import { onStaffDataChanged } from '../app/staffEvents';
 
 type TenantState =
   | { status: 'none' }
@@ -25,6 +26,8 @@ interface TenantContextType {
   /** Convenience accessors; null until ready. */
   school: SchoolProfile | null;
   boardProfile: BoardProfile | null;
+  /** Re-fetch the current school profile (used after PIN setup or transient network recovery). */
+  reload: () => void;
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined);
@@ -36,6 +39,8 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const { session } = useAuth();
   const schoolId = session?.schoolId ?? null;
   const [state, setState] = useState<TenantState>({ status: 'none' });
+  const [tick, setTick] = useState(0);
+  const reload = useCallback(() => setTick(t => t + 1), []);
 
   useEffect(() => {
     if (!schoolId) {
@@ -43,16 +48,43 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
     let live = true;
-    setState({ status: 'loading', schoolId });
+    setState(prev => (prev.status === 'ready' && prev.schoolId === schoolId ? prev : { status: 'loading', schoolId }));
     schoolProfileService.getProfile(schoolId).then(r => {
       if (!live) return;
-      if (!r.ok) setState({ status: 'error', schoolId, error: r.error });
-      else setState({ status: 'ready', schoolId, school: r.data, boardProfile: getBoardProfile(r.data.boardProfileId) });
+      if (!r.ok) {
+        setState(prev =>
+          prev.status === 'ready' && prev.schoolId === schoolId ? prev : { status: 'error', schoolId, error: r.error }
+        );
+      } else {
+        setState({ status: 'ready', schoolId, school: r.data, boardProfile: getBoardProfile(r.data.boardProfileId) });
+      }
     });
     return () => {
       live = false;
     };
-  }, [schoolId]);
+  }, [schoolId, tick]);
+
+  // Recover automatically from transient/pre-PIN errors when the tab regains connectivity, focus, or after saves.
+  useEffect(() => {
+    if (!schoolId) return;
+    const recover = () => {
+      if (document.visibilityState === 'hidden') return;
+      if (state.status === 'error') reload();
+    };
+    const onOnline = () => {
+      if (state.status === 'error') reload();
+    };
+    document.addEventListener('visibilitychange', recover);
+    window.addEventListener('focus', recover);
+    window.addEventListener('online', onOnline);
+    const unsubData = onStaffDataChanged(reload);
+    return () => {
+      document.removeEventListener('visibilitychange', recover);
+      window.removeEventListener('focus', recover);
+      window.removeEventListener('online', onOnline);
+      unsubData();
+    };
+  }, [schoolId, state.status, reload]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -64,7 +96,8 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const value: TenantContextType = {
     state,
     school: state.status === 'ready' ? state.school : null,
-    boardProfile: state.status === 'ready' ? state.boardProfile : null
+    boardProfile: state.status === 'ready' ? state.boardProfile : null,
+    reload
   };
 
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;

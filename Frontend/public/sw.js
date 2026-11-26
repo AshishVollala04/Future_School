@@ -1,10 +1,11 @@
 /**
  * FutureSchool service worker.
- * - Caches static shell and offline fallback page for PWA / Android TWA installability.
- * - NEVER caches /api/ or non-GET requests so attendance, marks, fees, and OTP stay strictly live.
+ * - Caches offline fallback and icons for PWA / Android TWA installability.
+ * - Always revalidates HTML navigations against the network so F5 / reloads load the latest build.
+ * - NEVER caches /api/ or HTML rewrites under /assets/, so fees, attendance, marks, and deploys stay live.
  */
-const CACHE_NAME = 'futureschool-shell-v1';
-const SHELL_URLS = ['/', '/offline.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE_NAME = 'futureschool-shell-v2';
+const SHELL_URLS = ['/offline.html', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -34,39 +35,36 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  // Never cache API endpoints, Razorpay callbacks, or well-known verification files.
+  // Never cache API endpoints or well-known verification files.
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/.well-known/')) return;
 
-  // Navigation requests: network first, fallback to offline page cleanly.
+  // Navigation requests: revalidate HTML against network, fallback to /offline.html when offline.
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req)
-        .then(res => {
-          if (res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put('/', copy)).catch(() => undefined);
-          }
-          return res;
-        })
-        .catch(() => caches.match('/offline.html').then(r => r || caches.match('/')))
+      fetch(new Request(req.url, { cache: 'no-cache' }))
+        .catch(() => caches.match('/offline.html'))
     );
     return;
   }
 
-  // Versioned Vite assets and icons: cache-first with background refresh.
+  // Versioned Vite assets and icons: cache-first, rejecting HTML SPA rewrites for missing deploy chunks.
   if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
+    const isViteChunk = url.pathname.startsWith('/assets/');
     event.respondWith(
       caches.match(req).then(cached => {
-        const fetched = fetch(req)
+        if (cached) return cached;
+        return fetch(req)
           .then(res => {
+            const type = (res.headers.get('content-type') || '').toLowerCase();
+            if (isViteChunk && type.includes('text/html')) {
+              return Response.error();
+            }
             if (res.ok) {
               const copy = res.clone();
               caches.open(CACHE_NAME).then(c => c.put(req, copy)).catch(() => undefined);
             }
             return res;
-          })
-          .catch(() => cached);
-        return cached || fetched;
+          });
       })
     );
   }

@@ -47,7 +47,7 @@ export const AttendanceCalendar: React.FC = () => {
   const { t, i18n } = useTranslation();
   const scope = useScope();
   const { currentUser } = useAuth();
-  const q = useQuery(() => academicsService.getAttendance(scope, 190), [scope.schoolId, scope.studentId]);
+  const q = useQuery(() => academicsService.getAttendance(scope, 190), [scope.schoolId, scope.studentId], { refreshOnDataChange: true, refreshIntervalMs: 60_000 });
   const today = todayISO();
   const [month, setMonth] = useState(today.slice(0, 7)); // YYYY-MM
 

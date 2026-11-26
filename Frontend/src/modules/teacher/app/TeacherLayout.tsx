@@ -7,8 +7,9 @@
  * only the PIN screen. The server refuses everything else until then too. After a sign-in with
  * an SMS code, this device is trusted, so next time the PIN alone is enough (no SMS).
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { useTenant } from '../../../context/TenantContext';
 import { BookOpenCheck, DoorOpen, CalendarCheck, CalendarOff, ClipboardList, FileCheck2, FileEdit, Home, KeyRound, Megaphone, MessageSquare, NotebookPen, ShieldCheck, UserCheck } from 'lucide-react';
 import { TeacherBell } from './TeacherBell';
 import { StaffShell, StaffNavGroup, StaffNavItem } from '../../../components/layout/StaffShell';
@@ -24,9 +25,17 @@ import { TeacherPinSetup } from './TeacherSignInPin';
 export const TeacherLayout: React.FC = () => {
   const scope = useScope();
   const { session } = useAuth();
+  const { state: tenant, reload: reloadTenant } = useTenant();
+  const wasReadyRef = useRef(false);
   const pin = useQuery(() => authService.getMyPin(scope), [scope.schoolId, scope.userId]);
   const ready = pin.status === 'ready' && !(pin.data.setupRequired ?? !pin.data.pinSet);
   const smsSession = Boolean(session?.authMethods.includes('SMS_OTP'));
+  useEffect(() => {
+    if (ready && !wasReadyRef.current && tenant.status === 'error') {
+      reloadTenant();
+    }
+    wasReadyRef.current = ready;
+  }, [ready, tenant.status, reloadTenant]);
   useEffect(() => {
     // Trust this device once the PIN is in place, so the next sign-in needs no SMS.
     if (!ready || !smsSession) return;
@@ -37,7 +46,17 @@ export const TeacherLayout: React.FC = () => {
 
   if (pin.status === 'loading') return <div className="p-6"><LoadingBlock /></div>;
   if (pin.status === 'error') return <div className="p-6"><ErrorState message={pin.error} onRetry={pin.reload} /></div>;
-  if (!ready) return <TeacherPinSetup resetting={pin.data.pinSet} onDone={pin.reload} />;
+  if (!ready) {
+    return (
+      <TeacherPinSetup
+        resetting={pin.data.pinSet}
+        onDone={() => {
+          pin.reload();
+          reloadTenant();
+        }}
+      />
+    );
+  }
   return <TeacherPortal />;
 };
 

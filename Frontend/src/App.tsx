@@ -19,6 +19,50 @@ import { LoginPage } from './modules/auth/LoginPage';
 import { IdpCallback } from './modules/auth/IdpCallback';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { isEnabled } from './app/featureFlags';
+import { isChunkLoadError, reloadOnceForNewBuild } from './app/buildRecovery';
+
+class RouteErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; message: string }
+> {
+  state = { hasError: false, message: '' };
+
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      hasError: true,
+      message: error instanceof Error ? error.message : 'Unable to load this screen.'
+    };
+  }
+
+  componentDidCatch(error: unknown) {
+    if (isChunkLoadError(error)) {
+      reloadOnceForNewBuild();
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-dvh bg-slate-50 flex items-center justify-center p-6">
+          <div className="max-w-sm w-full rounded-2xl border border-slate-200 bg-white p-6 text-center space-y-3 shadow-sm">
+            <h1 className="text-lg font-bold text-slate-900">Refresh needed</h1>
+            <p className="text-sm text-slate-600">
+              A newer version of FutureSchool is ready, or this screen could not finish loading.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="w-full min-h-11 rounded-xl bg-blue-700 text-white font-semibold"
+            >
+              Reload page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // === LAZY: Student Modules ===
 const StudentDashboard = React.lazy(() =>
@@ -159,8 +203,9 @@ export default function App() {
       <AndroidBackHandler />
       <AuthProvider>
         <TenantProvider>
-          <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
+          <RouteErrorBoundary>
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
               {/* Public Authentication Route */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/drive/:token" element={<DriverTrackingPage />} />
@@ -341,7 +386,8 @@ export default function App() {
               {/* Catch-all fallback */}
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
-          </Suspense>
+            </Suspense>
+          </RouteErrorBoundary>
         </TenantProvider>
       </AuthProvider>
     </BrowserRouter>
