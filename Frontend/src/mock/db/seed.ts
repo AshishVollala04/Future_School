@@ -175,7 +175,7 @@ function seedChangeRequests(schoolId: string, payments: Payment[]): ChangeReques
     mk('CR-GVS-2', `Refund ₹1,500: activity fee paid twice (${aadhya.receiptNo})`, {
       kind: 'REFUND', paymentId: aadhya.id, amount: 1500, reason: 'Activity fee was also paid in cash at the office on the same day.'
     }, 'PENDING_APPROVAL', 1),
-    mk('CR-GVS-3', 'Move SA-1 start to 25 Nov', { kind: 'EXAM_SCHEDULE', examId: 'EX-GVS-SA1', newStartsOn: '2026-11-25', reason: 'Local body election holiday on 23 Nov.' }, 'APPROVED', 3),
+    mk('CR-GVS-3', 'Move SA-1 start by 2 days', { kind: 'EXAM_SCHEDULE', examId: 'EX-GVS-SA1', newStartsOn: addDaysISO(9), reason: 'Local body election holiday on original exam date.' }, 'APPROVED', 3),
     mk('CR-GVS-4', 'Class 9 fee: instalment 4 revision', { kind: 'FEE_STRUCTURE', grade: 9, instalment: 4, newSchoolFee: 11500, reason: 'Lab consumables cost increase.' }, 'DRAFT', 0)
   ];
 }
@@ -346,7 +346,7 @@ function seedGVS(): SchoolDb {
   ];
 
   const exams: ExamWindow[] = [
-    { id: 'EX-GVS-SA1', schoolId, name: 'SA-1', startsOn: '2026-11-23', grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], clearanceRule: { categories: ['SCHOOL_FEE', 'TRANSPORT_FEE'], uptoInstalment: 2 } }
+    { id: 'EX-GVS-SA1', schoolId, name: 'SA-1', startsOn: addDaysISO(7), grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], clearanceRule: { categories: ['SCHOOL_FEE', 'TRANSPORT_FEE'], uptoInstalment: 2 } }
   ];
 
   const hallTicketReleases: HallTicketRelease[] = [
@@ -717,7 +717,7 @@ function seedSJM(): SchoolDb {
     lateFeePolicy: 'Late fee as per school policy, set by the school Admin.',
     // St. Jude follows CBSE (Classes 1-5: PT-1, Half-Yearly, PT-2, Annual; 33% to pass).
     // Only exams already held are shown; nothing is published for a future date.
-    exams: [{ id: 'EX-SJM-SA1', schoolId, name: 'Half-Yearly', startsOn: '2026-11-25', grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], clearanceRule: { categories: ['SCHOOL_FEE'], uptoInstalment: 2 } }],
+    exams: [{ id: 'EX-SJM-SA1', schoolId, name: 'Half-Yearly', startsOn: addDaysISO(9), grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], clearanceRule: { categories: ['SCHOOL_FEE'], uptoInstalment: 2 } }],
     hallTicketReleases: [{ examId: 'EX-SJM-SA1', studentId: 'SJM-2033-0105', releasedBy: ct.staffId, releasedAt: addDaysISO(-2) + 'T11:00:00+05:30' }],
     results: [
       {

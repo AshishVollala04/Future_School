@@ -87,7 +87,8 @@ public class ParentDataSeed {
         pay(sid, ++r, "GVS-2027-0005", "2026-06-11T12:00:00+05:30", "UPI", null, full("GVS-2027-0005", "SF-1", "AC-1", "SF-2"));
         pay(sid, ++r, "GVS-2027-0006", "2026-06-11T12:30:00+05:30", "CARD", null, full("GVS-2027-0006", "SF-1", "TR-1", "AC-1"));
 
-        exams.save(ExamWindow.builder().id("EX-GVS-SA1").name("SA-1").startsOn("2026-11-23").gradesCsv("1,2,3,4,5,6,7,8,9,10")
+        String sa1Start = LocalDate.now(ParentDataService.SCHOOL_ZONE).plusDays(7).toString();
+        exams.save(ExamWindow.builder().id("EX-GVS-SA1").name("SA-1").startsOn(sa1Start).gradesCsv("1,2,3,4,5,6,7,8,9,10")
                 .clearanceCategoriesCsv("SCHOOL_FEE,TRANSPORT_FEE").clearanceUptoInstalment(2).build());
         String yesterday = LocalDate.now(ParentDataService.SCHOOL_ZONE).minusDays(1).toString();
         releases.save(HallTicketRelease.builder().id("REL-GVS-SA1-GVS-2031-0042").examId("EX-GVS-SA1").studentId("GVS-2031-0042")
@@ -110,7 +111,8 @@ public class ParentDataSeed {
         int r = 1000;
         pay(sid, ++r, "SJM-2033-0105", "2026-06-14T18:00:00+05:30", "UPI", "GRD-0001", full("SJM-2033-0105", "SF-1", "AC-1"));
         pay(sid, ++r, "SJM-2033-0105", "2026-10-20T18:00:00+05:30", "UPI", "GRD-0001", full("SJM-2033-0105", "SF-2"));
-        exams.save(ExamWindow.builder().id("EX-SJM-SA1").name("Half-Yearly").startsOn("2026-11-25").gradesCsv("1,2,3,4,5,6,7,8,9,10")
+        String sjmExamStart = LocalDate.now(ParentDataService.SCHOOL_ZONE).plusDays(9).toString();
+        exams.save(ExamWindow.builder().id("EX-SJM-SA1").name("Half-Yearly").startsOn(sjmExamStart).gradesCsv("1,2,3,4,5,6,7,8,9,10")
                 .clearanceCategoriesCsv("SCHOOL_FEE").clearanceUptoInstalment(2).build());
         String twoDaysAgo = LocalDate.now(ParentDataService.SCHOOL_ZONE).minusDays(2).toString();
         releases.save(HallTicketRelease.builder().id("REL-SJM-SA1-SJM-2033-0105").examId("EX-SJM-SA1").studentId("SJM-2033-0105")

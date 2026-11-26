@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.futureschool.backend.entity.ChangeRequest;
 import com.futureschool.backend.entity.MarkCorrection;
 import com.futureschool.backend.governance.GovernanceService;
+import com.futureschool.backend.parent.ParentDataService;
 import com.futureschool.backend.repository.ChangeRequestRepository;
 import com.futureschool.backend.repository.MarkCorrectionRepository;
 import org.springframework.stereotype.Component;
@@ -72,9 +73,9 @@ public class GovernanceSeed {
         Map<String, Object> exam = new LinkedHashMap<>();
         exam.put("kind", "EXAM_SCHEDULE");
         exam.put("examId", "EX-GVS-SA1");
-        exam.put("newStartsOn", "2026-11-25");
-        exam.put("reason", "Local body election holiday on 23 Nov.");
-        cr("CR-GVS-3", "Move SA-1 start to 25 Nov", exam, "APPROVED", 3);
+        exam.put("newStartsOn", LocalDate.now(ParentDataService.SCHOOL_ZONE).plusDays(9).toString());
+        exam.put("reason", "Local body election holiday on original exam date.");
+        cr("CR-GVS-3", "Move SA-1 start by 2 days", exam, "APPROVED", 3);
 
         Map<String, Object> structure = new LinkedHashMap<>();
         structure.put("kind", "FEE_STRUCTURE");

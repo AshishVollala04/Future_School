@@ -85,7 +85,8 @@ class GovernanceFlowTest {
         JsonNode r = api.post("/api/governance/CR-GVS-3/execute", Map.of(), ops());
         assertEquals("EXECUTED", r.get("status").asText(), r.toString());
         JsonNode ticket = api.getJson("/api/parent/hall-tickets", api.parent("9876543210", "GVS-2027-0001")).get(0);
-        assertEquals("2026-11-25", ticket.get("exam").get("startsOn").asText());
+        String expectedDate = java.time.LocalDate.now(com.futureschool.backend.parent.ParentDataService.SCHOOL_ZONE).plusDays(9).toString();
+        assertEquals(expectedDate, ticket.get("exam").get("startsOn").asText());
     }
 
     @Test
