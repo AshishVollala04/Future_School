@@ -43,17 +43,38 @@ public class LeaveSeed {
         return grade <= 5 ? "primary" : grade <= 8 ? "upper" : "high";
     }
 
+    /**
+     * Weekly timetables for all classes, built together so no teacher is in two rooms in the same
+     * period: each class starts its subject rotation at a different offset, and when the subject's
+     * teacher is already busy in that period the next subject in the rotation is taken.
+     * Mirrors buildTimetables() in the frontend seed.
+     */
     private void timetables() {
         if (timetable.count() > 0) return;
-        for (SchoolClass c : classes.findAll()) {
+        List<SchoolClass> ordered = new ArrayList<>(classes.findAll());
+        ordered.sort(Comparator.comparing(SchoolClass::getId));
+        Map<String, Set<String>> busy = new HashMap<>(); // "day-period" -> teacher ids
+        for (int ci = 0; ci < ordered.size(); ci++) {
+            SchoolClass c = ordered.get(ci);
             int grade = c.getGradeNumber() == null ? 0 : c.getGradeNumber();
             List<String> subjects = SUBJECTS_BY_STAGE.get(stage(grade));
             Map<String, ClassSubjectTeacher> bySubject = new HashMap<>();
             subjectTeachers.findByClassIdOrderByIdAsc(c.getId()).forEach(s -> bySubject.putIfAbsent(s.getSubject(), s));
+            java.util.function.Function<String, String> teacherOf = s -> bySubject.containsKey(s) ? bySubject.get(s).getStaffId() : c.getClassTeacherId();
             for (int day = 1; day <= 6; day++) {
                 int periods = day == 6 ? 4 : 6;
                 for (int p = 0; p < periods; p++) {
-                    String subject = subjects.get((day * 2 + p) % subjects.size());
+                    Set<String> taken = busy.computeIfAbsent(day + "-" + p, k -> new HashSet<>());
+                    int base = day * 2 + p + ci;
+                    String subject = subjects.get(base % subjects.size());
+                    for (int k = 0; k < subjects.size(); k++) {
+                        String candidate = subjects.get((base + k) % subjects.size());
+                        if (!taken.contains(String.valueOf(teacherOf.apply(candidate)))) {
+                            subject = candidate;
+                            break;
+                        }
+                    }
+                    taken.add(String.valueOf(teacherOf.apply(subject)));
                     ClassSubjectTeacher st = bySubject.get(subject);
                     timetable.save(TimetableSlot.builder().id(c.getId() + "-" + DAYS[day - 1] + "-" + (p + 1)).classId(c.getId())
                             .dayOfWeek(DAYS[day - 1].name()).periodNumber(p + 1).startTime(PERIOD_TIMES[p][0]).endTime(PERIOD_TIMES[p][1])

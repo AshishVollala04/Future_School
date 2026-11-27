@@ -107,13 +107,19 @@ class LeaveFlowTest {
         JsonNode first = tt.get(0);
         assertEquals(1, first.get("day").asInt());
         assertEquals(1, first.get("period").asInt());
-        // Same rotation as the frontend seed: subjects[(day*2 + period) % 7] -> English on Monday P1.
+        // Same rotation as the frontend seed (per-class offset, skipping busy teachers) -> English on Monday P1.
         assertEquals("English", first.get("subject").asText());
         assertEquals("P. Ramesh", first.get("teacherName").asText());
 
         JsonNode mine = api.getJson("/api/staff/my-periods?day=1", sarah());
         assertTrue(mine.size() > 0);
         for (JsonNode m : mine) assertEquals("Physical Science", m.get("subject").asText());
+        // A teacher is never in two classes at the same time, on any day.
+        for (int day = 1; day <= 6; day++) {
+            java.util.Set<String> starts = new java.util.HashSet<>();
+            for (JsonNode m : api.getJson("/api/staff/my-periods?day=" + day, sarah()))
+                assertTrue(starts.add(m.get("start").asText()), "Sarah double-booked on day " + day + " at " + m.get("start").asText());
+        }
         assertEquals(0, api.getJson("/api/staff/my-periods?day=7", sarah()).size());
     }
 

@@ -73,7 +73,7 @@ public class GovernanceSeed {
         Map<String, Object> exam = new LinkedHashMap<>();
         exam.put("kind", "EXAM_SCHEDULE");
         exam.put("examId", "EX-GVS-SA1");
-        exam.put("newStartsOn", LocalDate.now(ParentDataService.SCHOOL_ZONE).plusDays(9).toString());
+        exam.put("newStartsOn", DemoDates.schoolDayIn(9).toString());
         exam.put("reason", "Local body election holiday on original exam date.");
         cr("CR-GVS-3", "Move SA-1 start by 2 days", exam, "APPROVED", 3);
 

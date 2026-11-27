@@ -357,7 +357,7 @@
       "homework": "Daily homework",
       "homeworkPending": "{{count}} pending",
       "homeworkDone": "All done",
-      "feePayment": "Fee payment",
+      "feePayment": "Fees",
       "feeNone": "No dues",
       "feeDue": "{{amount}} due",
       "feeOverdue": "{{amount}} overdue",

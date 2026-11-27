@@ -90,6 +90,12 @@ const PERIOD_TIMES: [string, string][] = [
   ['13:45', '14:30']
 ];
 
+/** Today plus `days`, moved to Monday if that day is a Sunday (exam dates on a Sunday fail validation). Mirrors DemoDates on the backend. */
+function schoolDayIn(days: number): string {
+  const d = addDaysISO(days);
+  return new Date(d + 'T00:00:00').getDay() === 0 ? addDaysISO(days + 1) : d;
+}
+
 /** n-th school day (Mon-Sat) after today. */
 function nextSchoolDay(n: number): string {
   let d = 0;
@@ -102,18 +108,41 @@ function nextSchoolDay(n: number): string {
   return date;
 }
 
-function buildTimetable(cs: ClassSection): TimetableSlot[] {
-  const subjects = SUBJECTS_BY_STAGE[stageOf(cs.grade)];
-  const teacherFor = (s: string) => cs.subjectTeachers.find(t => t.subject === s)?.name ?? cs.classTeacherName;
-  const slots: TimetableSlot[] = [];
-  for (let day = 1 as TimetableSlot['day']; day <= 6; day = (day + 1) as TimetableSlot['day']) {
-    const periods = day === 6 ? 4 : 6;
-    for (let p = 0; p < periods; p++) {
-      const subject = subjects[(day * 2 + p) % subjects.length];
-      slots.push({ day, period: p + 1, start: PERIOD_TIMES[p][0], end: PERIOD_TIMES[p][1], subject, teacherName: teacherFor(subject) });
+/**
+ * Weekly timetables for all classes of a school, built together so no teacher is in two rooms in
+ * the same period. Each class starts its subject rotation at a different offset; when the subject's
+ * teacher is already busy in that period, the next subject in the rotation is taken.
+ * Mirrors LeaveSeed.timetables() on the backend.
+ */
+function buildTimetables(classSections: ClassSection[]): Record<string, TimetableSlot[]> {
+  const ordered = [...classSections].sort((x, y) => x.id.localeCompare(y.id));
+  const busy = new Map<string, Set<string>>(); // "day-period" -> teacher names
+  const out: Record<string, TimetableSlot[]> = {};
+  ordered.forEach((cs, ci) => {
+    const subjects = SUBJECTS_BY_STAGE[stageOf(cs.grade)];
+    const teacherFor = (s: string) => cs.subjectTeachers.find(t => t.subject === s)?.name ?? cs.classTeacherName;
+    const slots: TimetableSlot[] = [];
+    for (let day = 1 as TimetableSlot['day']; day <= 6; day = (day + 1) as TimetableSlot['day']) {
+      const periods = day === 6 ? 4 : 6;
+      for (let p = 0; p < periods; p++) {
+        const taken = busy.get(`${day}-${p}`) ?? new Set<string>();
+        busy.set(`${day}-${p}`, taken);
+        const base = day * 2 + p + ci;
+        let subject = subjects[base % subjects.length];
+        for (let k = 0; k < subjects.length; k++) {
+          const candidate = subjects[(base + k) % subjects.length];
+          if (!taken.has(teacherFor(candidate))) {
+            subject = candidate;
+            break;
+          }
+        }
+        taken.add(teacherFor(subject));
+        slots.push({ day, period: p + 1, start: PERIOD_TIMES[p][0], end: PERIOD_TIMES[p][1], subject, teacherName: teacherFor(subject) });
+      }
     }
-  }
-  return slots;
+    out[cs.id] = slots;
+  });
+  return out;
 }
 
 function charges(schoolId: string, s: StudentRecord, annualSchoolFee: number, opts: { transport?: number; examFee?: number; activity?: number }): FeeCharge[] {
@@ -175,7 +204,7 @@ function seedChangeRequests(schoolId: string, payments: Payment[]): ChangeReques
     mk('CR-GVS-2', `Refund ₹1,500: activity fee paid twice (${aadhya.receiptNo})`, {
       kind: 'REFUND', paymentId: aadhya.id, amount: 1500, reason: 'Activity fee was also paid in cash at the office on the same day.'
     }, 'PENDING_APPROVAL', 1),
-    mk('CR-GVS-3', 'Move SA-1 start by 2 days', { kind: 'EXAM_SCHEDULE', examId: 'EX-GVS-SA1', newStartsOn: addDaysISO(9), reason: 'Local body election holiday on original exam date.' }, 'APPROVED', 3),
+    mk('CR-GVS-3', 'Move SA-1 start by 2 days', { kind: 'EXAM_SCHEDULE', examId: 'EX-GVS-SA1', newStartsOn: schoolDayIn(9), reason: 'Local body election holiday on original exam date.' }, 'APPROVED', 3),
     mk('CR-GVS-4', 'Class 9 fee: instalment 4 revision', { kind: 'FEE_STRUCTURE', grade: 9, instalment: 4, newSchoolFee: 11500, reason: 'Lab consumables cost increase.' }, 'DRAFT', 0)
   ];
 }
@@ -278,7 +307,7 @@ function seedGVS(): SchoolDb {
     payment(schoolId, 'GVS-2027-0006', '2026-06-11T12:30:00+05:30', 'CARD', full('GVS-2027-0006', 'SF-1', 'TR-1', 'AC-1'))
   ];
 
-  const timetables = Object.fromEntries(classSections.map(cs => [cs.id, buildTimetable(cs)]));
+  const timetables = buildTimetables(classSections);
 
   const homework: HomeworkItem[] = [
     {
@@ -346,7 +375,7 @@ function seedGVS(): SchoolDb {
   ];
 
   const exams: ExamWindow[] = [
-    { id: 'EX-GVS-SA1', schoolId, name: 'SA-1', startsOn: addDaysISO(7), grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], clearanceRule: { categories: ['SCHOOL_FEE', 'TRANSPORT_FEE'], uptoInstalment: 2 } }
+    { id: 'EX-GVS-SA1', schoolId, name: 'SA-1', startsOn: schoolDayIn(7), grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], clearanceRule: { categories: ['SCHOOL_FEE', 'TRANSPORT_FEE'], uptoInstalment: 2 } }
   ];
 
   const hallTicketReleases: HallTicketRelease[] = [
@@ -693,7 +722,7 @@ function seedSJM(): SchoolDb {
   const pay = (ids: string[]) => ids.map(id => ({ chargeId: `SJM-2033-0105-${id}`, amount: allCharges.find(c => c.id === `SJM-2033-0105-${id}`)!.amount }));
   return {
     schoolId, classSections, students,
-    timetables: { 'SJM-4-B': buildTimetable(classSections[0]) },
+    timetables: { 'SJM-4-B': buildTimetables([classSections[0]])['SJM-4-B'] },
     homework: [
       {
         id: 'HW-SJM-1', schoolId, classSectionId: 'SJM-4-B', subject: 'EVS', teacherName: 'D. Prakash',
@@ -717,7 +746,7 @@ function seedSJM(): SchoolDb {
     lateFeePolicy: 'Late fee as per school policy, set by the school Admin.',
     // St. Jude follows CBSE (Classes 1-5: PT-1, Half-Yearly, PT-2, Annual; 33% to pass).
     // Only exams already held are shown; nothing is published for a future date.
-    exams: [{ id: 'EX-SJM-SA1', schoolId, name: 'Half-Yearly', startsOn: addDaysISO(9), grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], clearanceRule: { categories: ['SCHOOL_FEE'], uptoInstalment: 2 } }],
+    exams: [{ id: 'EX-SJM-SA1', schoolId, name: 'Half-Yearly', startsOn: schoolDayIn(9), grades: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], clearanceRule: { categories: ['SCHOOL_FEE'], uptoInstalment: 2 } }],
     hallTicketReleases: [{ examId: 'EX-SJM-SA1', studentId: 'SJM-2033-0105', releasedBy: ct.staffId, releasedAt: addDaysISO(-2) + 'T11:00:00+05:30' }],
     results: [
       {

@@ -62,15 +62,15 @@ export const TeacherToday: React.FC = () => {
     <div className="space-y-6 max-w-3xl xl:max-w-6xl">
       <h1 className="text-xl font-bold">Today</h1>
 
-      {/* 1. Quick cards: swipe on a phone, a grid from tablet width. */}
-      <div className={`-mx-4 px-4 sm:-mx-6 sm:px-6 flex gap-3 overflow-x-auto no-scrollbar snap-x pb-1 md:mx-0 md:px-0 md:grid md:overflow-visible ${ct ? 'md:grid-cols-3 lg:grid-cols-5' : 'md:grid-cols-2'}`}>
-        <QuickCard to="/teacher/homework" icon={<BookOpenCheck className="w-6 h-6" />} tint="bg-blue-50 text-blue-700" title="Homework" status={hwStatus} alert={toCheck > 0} />
-        <QuickCard to="/teacher/messages" icon={<MessageSquare className="w-6 h-6" />} tint="bg-indigo-50 text-indigo-700" title="Messages from parents" status={msgStatus} alert={waiting > 0} />
+      {/* 1. Quick cards in a 2×2 grid (same as the Principal and Admin homes). */}
+      <div className="grid grid-cols-2 gap-3">
+        <QuickCard fill to="/teacher/homework" icon={<BookOpenCheck className="w-6 h-6" />} tint="bg-blue-50 text-blue-700" title="Homework" status={hwStatus} alert={toCheck > 0} />
+        <QuickCard fill to="/teacher/messages" icon={<MessageSquare className="w-6 h-6" />} tint="bg-indigo-50 text-indigo-700" title="Messages from parents" status={msgStatus} alert={waiting > 0} />
         {ct && (
           <>
-            <QuickCard to="/teacher/leave-requests" icon={<UserCheck className="w-6 h-6" />} tint="bg-emerald-50 text-emerald-700" title="Leave requests" status={leaveStatus} alert={pendingLeave > 0} />
-            <QuickCard to="/teacher/hall-tickets" icon={<ShieldCheck className="w-6 h-6" />} tint="bg-sky-50 text-sky-700" title="Hall ticket" status={ticketStatus} alert={toRelease > 0} />
-            <QuickCard to="/teacher/gate" icon={<DoorOpen className="w-6 h-6" />} tint="bg-amber-50 text-amber-700" title="Pickup gate check" status="Check a pickup pass" />
+            <QuickCard fill to="/teacher/leave-requests" icon={<UserCheck className="w-6 h-6" />} tint="bg-emerald-50 text-emerald-700" title="Leave requests" status={leaveStatus} alert={pendingLeave > 0} />
+            <QuickCard fill to="/teacher/hall-tickets" icon={<ShieldCheck className="w-6 h-6" />} tint="bg-sky-50 text-sky-700" title="Hall ticket" status={ticketStatus} alert={toRelease > 0} />
+            <QuickCard fill to="/teacher/gate" icon={<DoorOpen className="w-6 h-6" />} tint="bg-amber-50 text-amber-700" title="Pickup gate check" status="Check a pickup pass" />
           </>
         )}
       </div>

@@ -102,3 +102,19 @@ check('CT publishes 6', pub.ok && pub.data.published === 6, pub);
 const fa2 = ((await academicsService.getPublishedResults(P)) as any).data.find((r: any) => r.examName === 'FA-2' && r.status === 'CURRENT');
 check('parent now sees FA-2 v1 CURRENT', fa2 && fa2.status === 'CURRENT' && fa2.version === beforeFA2 + 1, fa2);
 check('accepted sheet locked after publish', !((await marksService.saveSheet(JEN, PS, rows, false)) as any).ok);
+
+// Demo timetable: no teacher is in two classes in the same period (every day, every period, both schools).
+const { getDb } = await import(u('mock/db/index.ts'));
+for (const school of ['GVS', 'SJM']) {
+  const db = getDb(school);
+  const seen = new Map<string, string>();
+  const clashes: string[] = [];
+  for (const [classId, slots] of Object.entries(db.timetables) as [string, any[]][]) {
+    for (const s of slots) {
+      const key = `${s.day}-${s.period}-${s.teacherName}`;
+      if (seen.has(key)) clashes.push(`${key}: ${seen.get(key)} & ${classId}`);
+      else seen.set(key, classId);
+    }
+  }
+  check(`${school} timetable has no teacher double-booked`, clashes.length === 0, clashes.slice(0, 3));
+}

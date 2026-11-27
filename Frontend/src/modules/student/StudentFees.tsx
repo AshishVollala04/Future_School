@@ -9,7 +9,7 @@ import { useWorkflow } from '../../hooks/useWorkflow';
 import { PageHeader, StatCard } from '../../components/common/PageHeader';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { StatusBadge } from '../../components/common/StatusBadge';
-import { CreditCard, CheckCircle2, Download, Receipt, Building, QrCode, Lock } from 'lucide-react';
+import { CreditCard, CheckCircle2, Download, ReceiptIndianRupee, Building, QrCode, Lock } from 'lucide-react';
 
 export const StudentFees: React.FC = () => {
   const [workflow] = useWorkflow();
@@ -125,7 +125,7 @@ export const StudentFees: React.FC = () => {
                   <CardTitle>Official Payment Receipts History</CardTitle>
                   <p className="text-xs text-slate-500 mt-0.5">Receipts issued by the school fee office</p>
                 </div>
-                <Receipt className="w-4 h-4 text-blue-600" />
+                <ReceiptIndianRupee className="w-4 h-4 text-blue-600" />
               </div>
             </CardHeader>
             <CardContent>

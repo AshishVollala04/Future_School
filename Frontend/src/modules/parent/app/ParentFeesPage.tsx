@@ -8,7 +8,7 @@
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, ChevronLeft, Download, Receipt, Lock, Building2 } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Download, ReceiptIndianRupee, Lock, Building2 } from 'lucide-react';
 import { useScope } from '../../../hooks/useScope';
 import { useQuery } from '../../../hooks/useQuery';
 import { feeService } from '../../../services/feeService';
@@ -79,7 +79,7 @@ export const ParentFeesPage: React.FC = () => {
                   <Panel className="p-3.5">
                     <div className="flex items-center gap-3">
                       {ins.outstanding > 0 ? (
-                        <Receipt className="w-6 h-6 text-slate-400" aria-hidden />
+                        <ReceiptIndianRupee className="w-6 h-6 text-slate-400" aria-hidden />
                       ) : (
                         <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                       )}
@@ -158,7 +158,7 @@ export const ParentFeesPage: React.FC = () => {
             <li key={p.id}>
               <button type="button" onClick={() => setReceipt(p)} className="w-full text-left">
                 <Panel className="p-3.5 flex items-center gap-3">
-                  <Receipt className="w-5 h-5 text-blue-700" />
+                  <ReceiptIndianRupee className="w-5 h-5 text-blue-700" />
                   <span className="flex-1 min-w-0">
                     <span className="block text-base font-semibold">{formatINR(p.amount)}</span>
                     <span className="block text-sm text-slate-500 truncate">
