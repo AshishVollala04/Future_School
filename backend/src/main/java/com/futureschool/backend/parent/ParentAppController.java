@@ -56,6 +56,12 @@ public class ParentAppController {
     // Fees are collected at the school counter and recorded by finance staff (/api/office/fees/cash),
     // who issue the official receipt; parents see dues and receipts above.
 
+    @GetMapping("/overview")
+    @Operation(summary = "Session child profile, class section and assigned subject teachers")
+    public ResponseEntity<?> overview(Authentication auth) {
+        return run(auth, data::overview);
+    }
+
     @GetMapping("/attendance")
     public ResponseEntity<?> attendance(Authentication auth, @RequestParam(defaultValue = "30") int days) {
         return run(auth, p -> data.attendance(p, days));

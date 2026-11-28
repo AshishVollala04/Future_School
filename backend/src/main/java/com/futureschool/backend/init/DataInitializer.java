@@ -44,9 +44,18 @@ public class DataInitializer implements CommandLineRunner {
     private final LeaveSeed leaveSeed;
     private final CommsSeed commsSeed;
     private final OfficeSeed officeSeed;
+    private FutureSchoolSeed futureSchoolSeed;
 
     @Value("${app.seed.demo-data:true}")
     private boolean seedDemo;
+
+    @Value("${app.seed.future-school:false}")
+    private boolean seedFutureSchool;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setFutureSchoolSeed(FutureSchoolSeed futureSchoolSeed) {
+        this.futureSchoolSeed = futureSchoolSeed;
+    }
 
     public DataInitializer(SchoolRepository schools, SchoolMembershipRepository memberships, SchoolClassRepository classRepository,
                            UserAccountRepository accounts, StudentRepository studentRepository, TeacherRepository teacherRepository,
@@ -73,7 +82,12 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (!seedDemo) {
-            log.info("Demo seed disabled (app.seed.demo-data=false)");
+            if (seedFutureSchool && futureSchoolSeed != null) {
+                log.info("Demo seed disabled; running Future School (FS) real seed...");
+                futureSchoolSeed.seed();
+            } else {
+                log.info("Demo seed disabled (app.seed.demo-data=false)");
+            }
             return;
         }
         tx.executeWithoutResult(s -> {

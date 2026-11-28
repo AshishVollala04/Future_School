@@ -95,5 +95,27 @@ export const studentDirectoryService = {
       : serverOnly(),
 
   assignSubjectTeacher: (body: { classId: string; subject: string; staffId: string }): Promise<Result<unknown>> =>
-    USE_BACKEND ? api.post('/api/admin/academics/subject-teachers', body) : serverOnly()
+    USE_BACKEND ? api.post('/api/admin/academics/subject-teachers', body) : serverOnly(),
+
+  listTeachers: (): Promise<Result<Array<{
+    id: string;
+    teacherId: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    designation?: string;
+    qualification?: string;
+    primarySubject?: string;
+    active: boolean;
+  }>>> => (USE_BACKEND ? api.get('/api/teachers') : serverOnly()),
+
+  createTeacher: (teacher: {
+    name: string;
+    phone: string;
+    email?: string;
+    primarySubject: string;
+    designation?: string;
+    qualification?: string;
+  }): Promise<Result<{ id: string; teacherId: string; name: string }>> =>
+    USE_BACKEND ? api.post('/api/teachers', { ...teacher, active: true }) : serverOnly()
 };

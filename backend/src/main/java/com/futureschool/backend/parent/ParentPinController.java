@@ -36,6 +36,7 @@ public class ParentPinController {
     private final PasswordEncoder passwords;
     private final SignInService signIn;
     private final Teaching t;
+    private com.futureschool.backend.security.AuthSessionCache sessionCache;
 
     public ParentPinController(UserAccountRepository accounts, LoginSessionRepository sessions, PasswordEncoder passwords,
                                SignInService signIn, Teaching t) {
@@ -44,6 +45,11 @@ public class ParentPinController {
         this.passwords = passwords;
         this.signIn = signIn;
         this.t = t;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setSessionCache(com.futureschool.backend.security.AuthSessionCache sessionCache) {
+        this.sessionCache = sessionCache;
     }
 
     private static boolean resetting(SchoolPrincipal p) {
@@ -113,6 +119,7 @@ public class ParentPinController {
                 s.setMethods(String.join(",", Arrays.stream(s.getMethods().split(",")).filter(x -> !x.equals("PIN_RESET")).toList()) + ",PIN");
                 sessions.save(s);
             }
+            if (sessionCache != null) sessionCache.evictAccount(a.getId());
             t.record(p, forgot ? "PARENT_PIN_RESET_BY_SMS" : change ? "PARENT_PIN_CHANGED" : "PARENT_PIN_SET", a.getId(), a.getName(), null);
             return ResponseEntity.ok(status(a, false));
         } catch (AuthFlowException e) {

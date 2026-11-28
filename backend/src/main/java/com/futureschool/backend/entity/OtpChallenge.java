@@ -39,6 +39,10 @@ public class OtpChallenge {
     @Column(name = "code_hash", nullable = false, length = 128)
     private String codeHash;
 
+    /** Populated only when app.otp.dev-reveal=true (never in production). */
+    @Column(name = "dev_code", length = 12)
+    private String devCode;
+
     /** Binds a staff second factor / step-up to the ticket or session that asked for it. */
     @Column(name = "bound_to", length = 64)
     private String boundTo;

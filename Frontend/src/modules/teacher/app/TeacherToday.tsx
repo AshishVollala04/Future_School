@@ -75,13 +75,13 @@ export const TeacherToday: React.FC = () => {
         )}
       </div>
 
-      {/* 2. Notice board (red, right under the quick cards, as on the Parent home) */}
+      {/* 2. Notice board */}
       <NoticeBoardCard
         to="/teacher/notices"
         heading="Notice board"
         viewAll="View all"
         emptyText="No notices yet"
-        latest={latest ? { title: latest.title, body: latest.body, date: formatDate(latest.publishedAt.slice(0, 10)) } : null}
+        latest={latest ? { title: latest.title, body: latest.body, date: formatDate(latest.publishedAt.slice(0, 10)), priority: latest.priority } : null}
       />
 
       {/* 3. Periods and substitution */}

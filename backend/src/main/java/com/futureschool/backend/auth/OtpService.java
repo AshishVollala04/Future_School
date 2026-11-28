@@ -39,16 +39,25 @@ public class OtpService {
     private final byte[] pepper;
     private final boolean devReveal;
     private final int rateMax;
+    private final String fixedCode;
 
+    public OtpService(OtpChallengeRepository challenges, OtpSender sender,
+                      String pepper, boolean devReveal, int rateMax) {
+        this(challenges, sender, pepper, devReveal, rateMax, "");
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
     public OtpService(OtpChallengeRepository challenges, OtpSender sender,
                       @Value("${app.otp.pepper:${jwt.secret}}") String pepper,
                       @Value("${app.otp.dev-reveal:false}") boolean devReveal,
-                      @Value("${app.otp.rate-max:5}") int rateMax) {
+                      @Value("${app.otp.rate-max:5}") int rateMax,
+                      @Value("${app.otp.fixed-code:}") String fixedCode) {
         this.rateMax = rateMax;
         this.challenges = challenges;
         this.sender = sender;
         this.pepper = pepper.getBytes(StandardCharsets.UTF_8);
         this.devReveal = devReveal;
+        this.fixedCode = fixedCode == null ? "" : fixedCode.trim();
     }
 
     public record ChallengeView(String challengeId, String channel, String maskedDestination, long expiresAt,
@@ -65,7 +74,7 @@ public class OtpService {
         OtpChallenge c = challenges.save(OtpChallenge.builder()
                 .id("OTP-" + UUID.randomUUID())
                 .channel(channel).destination(destination).purpose(purpose).boundTo(boundTo)
-                .codeHash(hash(code)).attemptsLeft(MAX_ATTEMPTS).resends(0)
+                .codeHash(hash(code)).devCode(devReveal ? code : null).attemptsLeft(MAX_ATTEMPTS).resends(0)
                 .createdAt(now).lastSentAt(now).expiresAt(now.plus(TTL)).consumed(false)
                 .build());
         deliver(channel, destination, code, purpose);
@@ -81,6 +90,7 @@ public class OtpService {
         if (now.isBefore(c.getLastSentAt().plus(RESEND_COOLDOWN))) throw new AuthFlowException("COOLDOWN", "Please wait before asking for a new code.", null, 429);
         String code = newCode();
         c.setCodeHash(hash(code));
+        c.setDevCode(devReveal ? code : null);
         c.setResends(c.getResends() + 1);
         c.setLastSentAt(now);
         c.setExpiresAt(now.plus(TTL));
@@ -123,11 +133,13 @@ public class OtpService {
 
     private ChallengeView view(OtpChallenge c, String code) {
         long resendAt = c.getResends() >= MAX_RESENDS ? Long.MAX_VALUE : c.getLastSentAt().plus(RESEND_COOLDOWN).toEpochMilli();
+        String revealed = devReveal ? (c.getDevCode() != null ? c.getDevCode() : code) : null;
         return new ChallengeView(c.getId(), c.getChannel(), mask(c.getChannel(), c.getDestination()), c.getExpiresAt().toEpochMilli(),
-                resendAt, c.getAttemptsLeft(), devReveal ? code : null);
+                resendAt, c.getAttemptsLeft(), revealed);
     }
 
     private String newCode() {
+        if (!fixedCode.isEmpty()) return fixedCode;
         return String.format("%06d", random.nextInt(1_000_000));
     }
 

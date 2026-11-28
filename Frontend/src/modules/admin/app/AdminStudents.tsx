@@ -20,9 +20,19 @@ export const AdminStudents: React.FC = () => {
 
   const studentsQ = useQuery(() => studentDirectoryService.listStudents(applied), [scope.schoolId, applied]);
   const setupQ = useQuery(() => studentDirectoryService.getAcademicsSetup(), [scope.schoolId]);
+  const teachersQ = useQuery(() => studentDirectoryService.listTeachers(), [scope.schoolId]);
 
   const [editId, setEditId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Add teacher form state
+  const [tName, setTName] = useState('');
+  const [tPhone, setTPhone] = useState('');
+  const [tEmail, setTEmail] = useState('');
+  const [tSubject, setTSubject] = useState('Mathematics');
+  const [tDesignation, setTDesignation] = useState('Subject Teacher');
+  const [tQual, setTQual] = useState('');
+  const [tSaving, setTSaving] = useState(false);
 
   // CSV import state
   const [csvText, setCsvText] = useState('');
@@ -43,12 +53,47 @@ export const AdminStudents: React.FC = () => {
   const canAdmissions = (access.data?.permissions ?? []).includes('ADMISSIONS');
   const canAcademics = (access.data?.permissions ?? []).includes('ACADEMIC_OPS');
 
-  const classOptions = (setupQ.data?.classes ?? []).map(c => ({
-    id: c.id,
-    grade: c.grade,
-    section: c.section,
-    label: `Class ${c.grade}-${c.section}`
-  }));
+  const classOptions = React.useMemo(
+    () =>
+      (setupQ.data?.classes ?? []).map(c => ({
+        id: c.id,
+        grade: c.grade,
+        section: c.section,
+        label: `Class ${c.grade}-${c.section}`
+      })),
+    [setupQ.data?.classes]
+  );
+
+  const handleAddTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSetupErr(null);
+    setSetupMsg(null);
+    if (!tName.trim() || tPhone.replace(/\D/g, '').length < 10 || !tSubject.trim()) {
+      setSetupErr('Enter teacher name, 10-digit mobile number, and primary subject.');
+      return;
+    }
+    setTSaving(true);
+    const res = await studentDirectoryService.createTeacher({
+      name: tName.trim(),
+      phone: tPhone.replace(/\D/g, '').slice(-10),
+      email: tEmail.trim() || undefined,
+      primarySubject: tSubject.trim(),
+      designation: tDesignation.trim() || 'Teacher',
+      qualification: tQual.trim() || undefined
+    });
+    setTSaving(false);
+    if (!res.ok) {
+      setSetupErr(res.error);
+      return;
+    }
+    setSetupMsg(`Teacher ${res.data.name} (${res.data.teacherId}) added and ready for OTP sign-in.`);
+    setTName('');
+    setTPhone('');
+    setTEmail('');
+    setTQual('');
+    teachersQ.reload();
+    setupQ.reload();
+  };
 
   const downloadTemplate = async () => {
     const res = await studentDirectoryService.getImportTemplate();
@@ -331,6 +376,49 @@ export const AdminStudents: React.FC = () => {
               </form>
             </Panel>
           </div>
+
+          <Panel className="p-4 space-y-3">
+            <h2 className="font-bold">Add a teacher</h2>
+            <form onSubmit={handleAddTeacher} className="space-y-2.5 text-sm">
+              <div className="grid sm:grid-cols-3 gap-2">
+                <input value={tName} onChange={e => setTName(e.target.value)} placeholder="Full name" className={inputClass} required />
+                <input value={tPhone} onChange={e => setTPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile" inputMode="numeric" className={inputClass} required />
+                <input value={tSubject} onChange={e => setTSubject(e.target.value)} list="fs-subjects" placeholder="Primary subject" className={inputClass} required />
+              </div>
+              <datalist id="fs-subjects">
+                <option value="Telugu" />
+                <option value="Hindi" />
+                <option value="English" />
+                <option value="Mathematics" />
+                <option value="Physical Science" />
+                <option value="Biological Science" />
+                <option value="Social Studies" />
+              </datalist>
+              <div className="grid sm:grid-cols-3 gap-2">
+                <input value={tEmail} onChange={e => setTEmail(e.target.value)} type="email" placeholder="School email (optional)" className={inputClass} />
+                <input value={tDesignation} onChange={e => setTDesignation(e.target.value)} placeholder="Role (e.g. Class Teacher 8-A)" className={inputClass} />
+                <input value={tQual} onChange={e => setTQual(e.target.value)} placeholder="Qualification (optional)" className={inputClass} />
+              </div>
+              <PrimaryButton type="submit" loading={tSaving}>Add teacher</PrimaryButton>
+            </form>
+          </Panel>
+
+          {teachersQ.status === 'ready' && teachersQ.data.length > 0 && (
+            <Section title={`Faculty (${teachersQ.data.length})`}>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {teachersQ.data.map(t => (
+                  <Panel key={t.id} className="p-3.5 space-y-1 text-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-bold">{t.name}</p>
+                      <Pill tone={t.active ? 'success' : 'neutral'}>{t.primarySubject || 'Faculty'}</Pill>
+                    </div>
+                    <p className="text-xs text-slate-600">{t.designation || 'Teacher'}{t.qualification ? ` · ${t.qualification}` : ''}</p>
+                    <p className="text-xs text-slate-500 font-mono">{t.teacherId}{t.phone ? ` · +91 ${t.phone}` : ''}</p>
+                  </Panel>
+                ))}
+              </div>
+            </Section>
+          )}
 
           <Section title="Current classes & subject teachers">
             {setupQ.status === 'loading' ? <LoadingBlock /> : setupQ.status === 'error' ? <ErrorState message={setupQ.error} onRetry={setupQ.reload} /> : (

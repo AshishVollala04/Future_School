@@ -8,7 +8,6 @@ export type Result<T> =
 
 export type OtpChannel = 'SMS' | 'EMAIL';
 
-/** What the client is allowed to know about an OTP challenge. Never the code. */
 export interface OtpChallenge {
   challengeId: string;
   channel: OtpChannel;
@@ -16,7 +15,9 @@ export interface OtpChallenge {
   expiresAt: number;
   resendAvailableAt: number;
   attemptsRemaining: number;
-  /** Only the mock implementation fills this. Always labelled "Prototype / mock". */
+  /** DB-backed staging/prototype OTP when app.otp.dev-reveal=true; undefined in production. */
+  devCode?: string;
+  /** Human-readable OTP banner hint when dev-reveal or prototype mock is active. */
   mockHint?: string;
 }
 

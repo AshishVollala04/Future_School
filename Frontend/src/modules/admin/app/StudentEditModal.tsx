@@ -48,16 +48,19 @@ export const StudentEditModal: React.FC<Props> = ({ isOpen, onClose, studentId, 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const firstClassId = classes[0]?.id ?? '';
+  const firstGrade = classes[0]?.grade;
+  const firstSection = classes[0]?.section ?? 'A';
+
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
     if (!studentId) {
-      const first = classes[0];
       setForm({
         ...EMPTY_FORM,
-        classId: first?.id ?? '',
-        className: first?.grade ? `Class ${first.grade}` : 'Class 10',
-        section: first?.section ?? 'A'
+        classId: firstClassId,
+        className: firstGrade ? `Class ${firstGrade}` : 'Class 10',
+        section: firstSection
       });
       return;
     }
@@ -70,7 +73,7 @@ export const StudentEditModal: React.FC<Props> = ({ isOpen, onClose, studentId, 
       }
       setForm({ ...EMPTY_FORM, ...res.data });
     });
-  }, [isOpen, studentId, classes]);
+  }, [isOpen, studentId, firstClassId, firstGrade, firstSection]);
 
   const set = (k: keyof StudentProfileDTO, v: string | number) => setForm(prev => ({ ...prev, [k]: v }));
 

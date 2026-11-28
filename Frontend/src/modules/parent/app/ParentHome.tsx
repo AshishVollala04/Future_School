@@ -164,7 +164,7 @@ export const ParentHome: React.FC = () => {
         heading={t('parent.ui.noticeBoard')}
         viewAll={t('parent.ui.viewAll')}
         emptyText={t('parent.ui.noticesNone')}
-        latest={latest ? { title: latest.title, body: latest.body, date: formatDate(latest.publishedAt.slice(0, 10), lang) } : null}
+        latest={latest ? { title: latest.title, body: latest.body, date: formatDate(latest.publishedAt.slice(0, 10), lang), priority: latest.priority } : null}
       />
 
       {/* 2. Quick cards: 2x2 grid on mobile/tablet, 4-col on desktop */}

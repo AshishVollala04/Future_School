@@ -862,24 +862,25 @@ export class MockAuthService implements AuthService {
     return ok(this.accounts().map(a => this.accountView(a, scope.schoolId)).filter((v): v is StaffAccountView => Boolean(v)));
   }
 
-  async inviteAdmin(scope: Scope, req: { name: string; email: string; title: string; permissions: AdminPermission[] }): Promise<Result<{ token: string; expiresAt: number }>> {
+  async inviteAdmin(scope: Scope, req: { name: string; email: string; title: string; permissions: AdminPermission[]; role?: 'PRINCIPAL' | 'ADMIN' }): Promise<Result<{ token: string; expiresAt: number }>> {
     const denied = this.requireSecurity(scope);
     if (denied) return fail(denied, 'FORBIDDEN');
+    const role = req.role === 'PRINCIPAL' ? 'PRINCIPAL' : 'ADMIN';
     const email = req.email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('Enter the school email address.', 'BAD_EMAIL');
     if (req.name.trim().length < 3) return fail('Enter the full name.', 'BAD_NAME');
-    if (!req.permissions.length) return fail('Choose at least one permission.', 'NO_PERMISSIONS');
+    if (role === 'ADMIN' && !req.permissions.length) return fail('Choose at least one permission.', 'NO_PERMISSIONS');
     if (this.accounts().some(a => a.email === email)) return fail('An account with this email already exists.', 'EXISTS');
     const accountId = `ACC-L-${Date.now().toString(36).toUpperCase()}`;
     const account: MockLeadershipAccount = {
       accountId, name: req.name.trim(), email, status: 'INVITED', idpLinks: [],
-      memberships: [{ membershipId: `MEM-${accountId}`, role: 'ADMIN', schoolId: scope.schoolId, title: req.title.trim() || 'Administrator', permissions: req.permissions }]
+      memberships: [{ membershipId: `MEM-${accountId}`, role, schoolId: scope.schoolId, title: req.title.trim() || (role === 'PRINCIPAL' ? 'Principal' : 'Administrator'), permissions: role === 'ADMIN' ? req.permissions : [] }]
     };
     storage.set(ADDED_ACCOUNTS_KEY, [...storage.get<MockLeadershipAccount[]>(ADDED_ACCOUNTS_KEY, []), account]);
     const token = `inv-${scope.schoolId.toLowerCase()}-${randomDigits(6)}`;
     const now = Date.now();
-    storage.set(INVITES_KEY, [...this.loadInvites(), { token, accountId, email, role: 'ADMIN', schoolId: scope.schoolId, invitedBy: scope.userId, createdAt: now, expiresAt: now + INVITE_TTL_MS }]);
-    auditService.record({ schoolId: scope.schoolId, action: 'ADMIN_INVITED', actorId: scope.userId, actorRole: scope.role, targetId: accountId, details: `${email} · ${req.permissions.join(', ')}` });
+    storage.set(INVITES_KEY, [...this.loadInvites(), { token, accountId, email, role, schoolId: scope.schoolId, invitedBy: scope.userId, createdAt: now, expiresAt: now + INVITE_TTL_MS }]);
+    auditService.record({ schoolId: scope.schoolId, action: role === 'PRINCIPAL' ? 'PRINCIPAL_INVITED' : 'ADMIN_INVITED', actorId: scope.userId, actorRole: scope.role, targetId: accountId, details: `${email}${req.permissions.length ? ` · ${req.permissions.join(', ')}` : ''}` });
     return ok({ token, expiresAt: now + INVITE_TTL_MS });
   }
 

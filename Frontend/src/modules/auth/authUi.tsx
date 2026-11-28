@@ -19,14 +19,28 @@ export const ErrorBox: React.FC<{ message: string | null }> = ({ message }) =>
     </div>
   ) : null;
 
-/** Visible only when the mock AuthService supplies a hint. */
-export const MockHint: React.FC<{ hint?: string }> = ({ hint }) =>
-  hint ? (
-    <div className="p-2.5 rounded-lg bg-amber-50 border border-dashed border-amber-300 text-xs text-amber-900 flex items-center gap-2">
-      <FlaskConical className="w-3.5 h-3.5 shrink-0" />
-      <span className="font-mono">{hint}</span>
+/** Visible when the backend (app.otp.dev-reveal=true) or prototype mock supplies an OTP hint. */
+export const MockHint: React.FC<{ hint?: string; code?: string; onFill?: (code: string) => void }> = ({ hint, code, onFill }) => {
+  const extracted = code ?? hint?.match(/\b(\d{6})\b/)?.[1];
+  if (!hint && !extracted) return null;
+  return (
+    <div className="p-2.5 rounded-xl bg-amber-50 border border-dashed border-amber-300 text-xs text-amber-900 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <FlaskConical className="w-3.5 h-3.5 shrink-0" />
+        <span className="font-mono font-semibold truncate">{hint ?? `OTP: ${extracted}`}</span>
+      </div>
+      {extracted && onFill && (
+        <button
+          type="button"
+          onClick={() => onFill(extracted)}
+          className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-200/80 hover:bg-amber-300 text-amber-950 font-semibold transition"
+        >
+          Fill {extracted}
+        </button>
+      )}
     </div>
-  ) : null;
+  );
+};
 
 export const PrimaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }> = ({
   loading,
@@ -137,7 +151,7 @@ export const OtpField: React.FC<{
               : t('login.resendIn', { time: fmt(resendIn) })}
         </LinkButton>
       </div>
-      <MockHint hint={challenge.mockHint} />
+      <MockHint hint={challenge.mockHint} code={challenge.devCode} onFill={onChange} />
     </div>
   );
 };

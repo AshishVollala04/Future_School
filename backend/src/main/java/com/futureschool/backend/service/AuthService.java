@@ -33,6 +33,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final MembershipService membershipService;
     private final SecureRandom random = new SecureRandom();
+    private com.futureschool.backend.security.AuthSessionCache sessionCache;
 
     public AuthService(UserAccountRepository accounts, SchoolMembershipRepository memberships, PasswordEncoder passwordEncoder,
                        MembershipService membershipService) {
@@ -40,6 +41,11 @@ public class AuthService {
         this.memberships = memberships;
         this.passwordEncoder = passwordEncoder;
         this.membershipService = membershipService;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setSessionCache(com.futureschool.backend.security.AuthSessionCache sessionCache) {
+        this.sessionCache = sessionCache;
     }
 
     // ------------------------------------------------------------------ current user
@@ -110,6 +116,7 @@ public class AuthService {
         if (!m.isActive() && m.getRole() == UserRole.TEACHER) membershipService.requireNotTeachingElsewhere(target, m.getId());
         m.setActive(!m.isActive());
         memberships.save(m);
+        if (sessionCache != null) sessionCache.evictMembership(m.getId());
         return toDto(target, m);
     }
 

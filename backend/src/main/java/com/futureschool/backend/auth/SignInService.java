@@ -62,6 +62,12 @@ public class SignInService {
     private final SecureRandom random = new SecureRandom();
     /** Prototype store. Production: shared store so lockout works across instances. */
     private final Map<String, long[]> passwordFails = new ConcurrentHashMap<>();
+    private com.futureschool.backend.security.AuthSessionCache sessionCache;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setSessionCache(com.futureschool.backend.security.AuthSessionCache sessionCache) {
+        this.sessionCache = sessionCache;
+    }
 
     public SignInService(OtpService otp, UserAccountRepository accounts, SchoolMembershipRepository memberships, SchoolRepository schools,
                          StudentRepository students, AuthTicketRepository tickets, LoginSessionRepository sessions, JwtUtil jwt,
@@ -374,6 +380,7 @@ public class SignInService {
 
     @Transactional
     public void revoke(String sessionId) {
+        if (sessionCache != null) sessionCache.evictSession(sessionId);
         sessions.findById(sessionId).ifPresent(s -> {
             s.setRevoked(true);
             sessions.save(s);

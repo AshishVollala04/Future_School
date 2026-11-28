@@ -9,7 +9,7 @@ import type { Scope } from '../../hooks/useScope';
 import { Result } from '../../types/session';
 import { FeeSummary, HallTicketStatus, Payment, PublishedResult, Refund } from '../../types/domain';
 import type { FeeService } from '../feeService';
-import type { AcademicsService, AttendanceSummary } from '../academicsService';
+import type { AcademicsService, AttendanceSummary, ChildOverview } from '../academicsService';
 import type { HallTicketService } from '../hallTicketService';
 import { api } from './http';
 
@@ -36,7 +36,9 @@ export class ApiAcademicsService implements AcademicsService {
   getTeacherAssignments = (scope: Scope) => this.fallback.getTeacherAssignments(scope);
   listClasses = (scope: Scope) => this.fallback.listClasses(scope);
   getMyPeriods = (scope: Scope, day: number) => this.fallback.getMyPeriods(scope, day);
-  getOverview = (scope: Scope) => this.fallback.getOverview(scope);
+  getOverview(scope: Scope) {
+    return scope.role === 'PARENT' ? api.get<ChildOverview>('/api/parent/overview') : this.fallback.getOverview(scope);
+  }
   getTimetable = (scope: Scope) => this.fallback.getTimetable(scope);
   getHomework = (scope: Scope) => this.fallback.getHomework(scope);
 

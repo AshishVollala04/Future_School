@@ -74,8 +74,9 @@ function toChallenge(c: ChallengeDto): OtpChallenge {
     expiresAt: c.expiresAt,
     resendAvailableAt: c.resendAvailableAt > 1e15 ? Number.POSITIVE_INFINITY : c.resendAvailableAt,
     attemptsRemaining: c.attemptsRemaining,
-    // Development server only (app.otp.dev-reveal=true). Production never returns the code.
-    mockHint: c.devCode ? `Prototype / development server: the code is ${c.devCode}` : undefined
+    devCode: c.devCode ?? undefined,
+    // Staging / development server only (app.otp.dev-reveal=true). Production never returns the code.
+    mockHint: c.devCode ? `Staging OTP (DB): ${c.devCode}` : undefined
   };
 }
 
@@ -375,7 +376,7 @@ export class ApiAuthService implements AuthService {
     return this.raw<StaffAccountView[]>('GET', '/api/office/staff');
   }
 
-  inviteAdmin(_scope: Scope, req: { name: string; email: string; title: string; permissions: AdminPermission[] }) {
+  inviteAdmin(_scope: Scope, req: { name: string; email: string; title: string; permissions: AdminPermission[]; role?: 'PRINCIPAL' | 'ADMIN' }) {
     return this.raw<{ token: string; expiresAt: number }>('POST', '/api/office/staff/invite', req);
   }
 

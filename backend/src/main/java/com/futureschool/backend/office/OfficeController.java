@@ -142,7 +142,7 @@ public class OfficeController {
     @SuppressWarnings("unchecked")
     public ResponseEntity<?> invite(Authentication a, @RequestBody Map<String, Object> b) {
         List<String> perms = b.get("permissions") instanceof List<?> l ? (List<String>) l : List.of();
-        return run(a, p -> staff.invite(p, s(b, "name"), s(b, "email"), s(b, "title"), perms));
+        return run(a, p -> staff.invite(p, s(b, "name"), s(b, "email"), s(b, "title"), perms, s(b, "role")));
     }
 
     @PostMapping("/api/office/staff/{accountId}/status")

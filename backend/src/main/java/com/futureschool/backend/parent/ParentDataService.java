@@ -61,6 +61,12 @@ public class ParentDataService {
     private final AcademicYearRepository academicYears;
     private final TransactionTemplate perSchoolTx;
     private final ObjectMapper json;
+    private SchoolClassRepository classes;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setClasses(SchoolClassRepository classes) {
+        this.classes = classes;
+    }
 
     public ParentDataService(StudentRepository students, SchoolRepository schools, FeeInstalmentRepository instalments, FeeChargeRepository charges,
                              FeeConcessionRepository concessions, FeePaymentRepository payments, FeeRefundRepository refunds,
@@ -106,6 +112,47 @@ public class ParentDataService {
     public static int gradeOf(Student s) {
         String d = s.getClassName() == null ? "" : s.getClassName().replaceAll("[^0-9]", "");
         return d.isEmpty() ? 0 : Integer.parseInt(d);
+    }
+
+    /** Child + class + subject-teacher overview for the Parent profile & home pages. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> overview(SchoolPrincipal p) {
+        Student s = child(p);
+        SchoolClass cls = classes == null ? null : classes.findById(s.getClassId()).orElse(null);
+        int grade = gradeOf(s);
+        Map<String, Object> studentDto = new LinkedHashMap<>();
+        studentDto.put("id", s.getId());
+        studentDto.put("schoolId", p.schoolId());
+        studentDto.put("classSectionId", s.getClassId());
+        studentDto.put("name", s.getName());
+        studentDto.put("grade", grade);
+        studentDto.put("section", s.getSection());
+        studentDto.put("rollNumber", s.getRoll());
+        studentDto.put("admissionNo", s.getAdmissionNumber());
+        if (s.getTransportRouteId() != null) studentDto.put("transportRouteId", s.getTransportRouteId());
+        if (s.getTransportStop() != null) studentDto.put("transportStop", s.getTransportStop());
+        String st = s.getStatus() == null ? "ACTIVE" : s.getStatus().toUpperCase(Locale.ROOT);
+        studentDto.put("status", List.of("ACTIVE", "TRANSFERRED", "EXITED").contains(st) ? st : "ACTIVE");
+
+        List<Map<String, Object>> subjList = subjectTeachers.findByClassIdOrderByIdAsc(s.getClassId()).stream()
+                .map(x -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("subject", x.getSubject());
+                    m.put("staffId", x.getStaffId());
+                    m.put("name", x.getStaffName());
+                    return m;
+                }).toList();
+
+        Map<String, Object> csDto = new LinkedHashMap<>();
+        csDto.put("id", s.getClassId());
+        csDto.put("schoolId", p.schoolId());
+        csDto.put("grade", cls != null && cls.getGradeNumber() != null ? cls.getGradeNumber() : grade);
+        csDto.put("section", cls != null ? cls.getSection() : s.getSection());
+        csDto.put("classTeacherStaffId", cls != null && cls.getClassTeacherId() != null ? cls.getClassTeacherId() : "");
+        csDto.put("classTeacherName", cls != null && cls.getClassTeacherName() != null ? cls.getClassTeacherName() : "");
+        csDto.put("subjectTeachers", subjList);
+
+        return Map.of("student", studentDto, "classSection", csDto);
     }
 
     // ================================================================== fees

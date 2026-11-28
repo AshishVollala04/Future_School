@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final SchoolMembershipRepository memberships;
     private final SchoolRepository schools;
     private final LoginSessionRepository sessions;
+    private AuthSessionCache sessionCache;
 
     public JwtAuthenticationFilter(JwtUtil jwtUtil, UserAccountRepository accounts, SchoolMembershipRepository memberships, SchoolRepository schools,
                                    LoginSessionRepository sessions) {
@@ -46,6 +48,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.accounts = accounts;
         this.memberships = memberships;
         this.schools = schools;
+    }
+
+    @Autowired(required = false)
+    public void setSessionCache(AuthSessionCache sessionCache) {
+        this.sessionCache = sessionCache;
     }
 
     @Override
@@ -94,22 +101,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String schoolId = c.get("sid", String.class);
             String sessionId = c.get("ses", String.class);
             if (accountId == null || membershipId == null || schoolId == null || sessionId == null) return;
-            // Server-side session: logout / suspension end it immediately.
-            com.futureschool.backend.entity.LoginSession session = sessions.findById(sessionId).orElse(null);
-            if (session == null || session.isRevoked() || java.time.Instant.now().isAfter(session.getExpiresAt())
-                    || !accountId.equals(session.getAccountId()) || !membershipId.equals(session.getMembershipId())) return;
 
-            UserAccount account = accounts.findById(accountId).orElse(null);
-            if (account == null || !account.isActive() || "Inactive".equalsIgnoreCase(account.getStatus())) return;
-            SchoolMembership m = memberships.findByIdAndAccountId(membershipId, accountId).orElse(null);
-            if (m == null || !m.isActive() || !schoolId.equals(m.getSchoolId())) return;
-            if (schools.findById(schoolId).map(s -> !"ACTIVE".equals(s.getStatus())).orElse(true)) return;
+            SchoolPrincipal principal = null;
+            if (sessionCache != null) {
+                AuthSessionCache.Entry cached = sessionCache.getValid(sessionId, accountId, membershipId, schoolId);
+                if (cached != null) principal = cached.principal();
+            }
+            if (principal == null) {
+                // Server-side session: logout / suspension end it immediately (and evict from sessionCache).
+                com.futureschool.backend.entity.LoginSession session = sessions.findById(sessionId).orElse(null);
+                if (session == null || session.isRevoked() || java.time.Instant.now().isAfter(session.getExpiresAt())
+                        || !accountId.equals(session.getAccountId()) || !membershipId.equals(session.getMembershipId())) return;
 
-            SchoolPrincipal principal = new SchoolPrincipal(account, m, session);
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null, principal.authorities()) {
+                UserAccount account = accounts.findById(accountId).orElse(null);
+                if (account == null || !account.isActive() || "Inactive".equalsIgnoreCase(account.getStatus())) return;
+                SchoolMembership m = memberships.findByIdAndAccountId(membershipId, accountId).orElse(null);
+                if (m == null || !m.isActive() || !schoolId.equals(m.getSchoolId())) return;
+                if (schools.findById(schoolId).map(s -> !"ACTIVE".equals(s.getStatus())).orElse(true)) return;
+
+                principal = new SchoolPrincipal(account, m, session);
+                if (sessionCache != null) sessionCache.put(sessionId, principal, true);
+            }
+            final SchoolPrincipal resolved = principal;
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(resolved, null, resolved.authorities()) {
                 @Override
                 public String getName() {
-                    return principal.loginId();
+                    return resolved.loginId();
                 }
             };
             auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

@@ -42,6 +42,12 @@ public class TeacherPinService {
     private final Teaching t;
     private final com.futureschool.backend.auth.TrustedDeviceService devices;
     private final com.futureschool.backend.repository.LoginSessionRepository sessions;
+    private com.futureschool.backend.security.AuthSessionCache sessionCache;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setSessionCache(com.futureschool.backend.security.AuthSessionCache sessionCache) {
+        this.sessionCache = sessionCache;
+    }
 
     public TeacherPinService(SchoolMembershipRepository memberships, UserAccountRepository accounts, PasswordEncoder passwords,
                              SignInService signIn, Teaching t, com.futureschool.backend.auth.TrustedDeviceService devices,
@@ -127,6 +133,7 @@ public class TeacherPinService {
             s.setMethods(String.join(",", java.util.Arrays.stream(s.getMethods().split(",")).filter(x -> !x.equals("PIN_RESET")).toList()) + ",PIN");
             sessions.save(s);
         }
+        if (sessionCache != null) sessionCache.evictMembership(m.getId());
         t.record(p, forgot ? "TEACHER_PIN_RESET_BY_SMS" : change ? "TEACHER_PIN_CHANGED" : "TEACHER_PIN_SET", m.getId(), p.account().getName(), null);
         Map<String, Object> v = status(m);
         v.put("setupRequired", false);
@@ -174,6 +181,7 @@ public class TeacherPinService {
             s.setRevoked(true);
             sessions.save(s);
         });
+        if (sessionCache != null) sessionCache.evictMembership(m.getId());
         String name = accounts.findById(m.getAccountId()).map(UserAccount::getName).orElse(m.getAccountId());
         t.record(p, "TEACHER_PIN_RESET", m.getId(), name, r);
         return status(m);

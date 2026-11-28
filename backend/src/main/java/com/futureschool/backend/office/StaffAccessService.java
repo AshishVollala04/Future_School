@@ -35,6 +35,7 @@ public class StaffAccessService {
     private final SignInService signIn;
     private final Teaching t;
     private final SecureRandom random = new SecureRandom();
+    private com.futureschool.backend.security.AuthSessionCache sessionCache;
 
     public StaffAccessService(UserAccountRepository accounts, SchoolMembershipRepository memberships, StaffInvitationRepository invitations,
                               PasswordEncoder passwords, SignInService signIn, Teaching t) {
@@ -44,6 +45,11 @@ public class StaffAccessService {
         this.passwords = passwords;
         this.signIn = signIn;
         this.t = t;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setSessionCache(com.futureschool.backend.security.AuthSessionCache sessionCache) {
+        this.sessionCache = sessionCache;
     }
 
     private long activeAdmins(String school) {
@@ -84,28 +90,36 @@ public class StaffAccessService {
 
     @Transactional
     public Map<String, Object> invite(SchoolPrincipal p, String name, String email, String title, List<String> perms) {
+        return invite(p, name, email, title, perms, "ADMIN");
+    }
+
+    @Transactional
+    public Map<String, Object> invite(SchoolPrincipal p, String name, String email, String title, List<String> perms, String roleName) {
         GovernanceService.requirePermission(p, "SECURITY");
+        UserRole role = "PRINCIPAL".equalsIgnoreCase(roleName) ? UserRole.PRINCIPAL : UserRole.ADMIN;
         String e = email == null ? "" : email.trim().toLowerCase();
         if (!e.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+")) throw Teaching.rule("BAD_EMAIL", "Enter the school email address.");
         String n = name == null ? "" : name.trim();
         if (n.length() < 3) throw Teaching.rule("BAD_NAME", "Enter the full name.");
         List<String> ps = perms == null ? List.of() : perms.stream().filter(PERMISSIONS::contains).distinct().toList();
-        if (ps.isEmpty()) throw Teaching.rule("NO_PERMISSIONS", "Choose at least one permission.");
+        if (role == UserRole.ADMIN && ps.isEmpty()) throw Teaching.rule("NO_PERMISSIONS", "Choose at least one permission.");
         if (accounts.findByEmailIgnoreCase(e).isPresent()) throw Teaching.rule("EXISTS", "An account with this email already exists.");
         String school = t.school();
         byte[] b = new byte[24];
         random.nextBytes(b);
         UserAccount a = accounts.save(UserAccount.builder().id("ACC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase()).loginId(e)
                 .password(passwords.encode(Base64.getUrlEncoder().encodeToString(b))) // unusable until the invite sets a password
-                .name(n).email(e).role(UserRole.ADMIN).status("Invited").active(false).linkedStudentIds(new ArrayList<>()).build());
+                .name(n).email(e).role(role).status("Invited").active(false).linkedStudentIds(new ArrayList<>()).build());
+        String defaultTitle = role == UserRole.PRINCIPAL ? "Principal" : "Administrator";
         SchoolMembership m = memberships.save(SchoolMembership.builder().id("MEM-" + UUID.randomUUID()).accountId(a.getId()).schoolId(school)
-                .role(UserRole.ADMIN).title(title == null || title.isBlank() ? "Administrator" : title.trim()).permissions(String.join(",", ps)).active(false).build());
+                .role(role).title(title == null || title.isBlank() ? defaultTitle : title.trim())
+                .permissions(role == UserRole.ADMIN ? String.join(",", ps) : "").active(false).build());
         random.nextBytes(b);
         String token = "inv-" + school.toLowerCase() + "-" + Base64.getUrlEncoder().withoutPadding().encodeToString(b).substring(0, 16);
         Instant exp = Instant.now().plus(INVITE_TTL);
-        invitations.save(StaffInvitation.builder().token(token).accountId(a.getId()).membershipId(m.getId()).email(e).role("ADMIN").schoolId(school)
+        invitations.save(StaffInvitation.builder().token(token).accountId(a.getId()).membershipId(m.getId()).email(e).role(role.name()).schoolId(school)
                 .invitedBy(p.account().getId()).expiresAt(exp).build());
-        t.record(p, "ADMIN_INVITED", a.getId(), e + " · " + String.join(", ", ps), null);
+        t.record(p, role == UserRole.PRINCIPAL ? "PRINCIPAL_INVITED" : "ADMIN_INVITED", a.getId(), e + (ps.isEmpty() ? "" : " · " + String.join(", ", ps)), null);
         return Map.of("token", token, "expiresAt", exp.toEpochMilli());
     }
 
@@ -133,6 +147,7 @@ public class StaffAccessService {
         }
         m.setActive("ACTIVE".equals(status));
         memberships.save(m);
+        if (sessionCache != null) sessionCache.evictMembership(m.getId());
         t.record(p, "DISABLED".equals(status) ? "ADMIN_SUSPENDED" : "ADMIN_REACTIVATED", accountId, a.getEmail(), r);
         return view(a, m);
     }

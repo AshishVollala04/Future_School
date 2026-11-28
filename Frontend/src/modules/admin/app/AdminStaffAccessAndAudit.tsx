@@ -82,6 +82,7 @@ export const AdminStaffAccess: React.FC = () => {
   const q = useQuery(() => authService.listSchoolAccounts(scope), [scope.schoolId]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [roleChoice, setRoleChoice] = useState<'ADMIN' | 'PRINCIPAL'>('ADMIN');
   const [title, setTitle] = useState('Administrator');
   const [perms, setPerms] = useState<AdminPermission[]>(['REPORTS']);
   const [invite, setInvite] = useState<string | null>(null);
@@ -98,7 +99,7 @@ export const AdminStaffAccess: React.FC = () => {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const r = await authService.inviteAdmin(scope, { name, email, title, permissions: perms });
+    const r = await authService.inviteAdmin(scope, { name, email, title, permissions: roleChoice === 'PRINCIPAL' ? [] : perms, role: roleChoice });
     setBusy(false);
     if (!r.ok) return setError(r.error);
     setInvite(r.data.token);
@@ -161,30 +162,54 @@ export const AdminStaffAccess: React.FC = () => {
         </ul>
       </Section>
 
-      <Section title="Invite an Admin">
+      <Section title="Invite a Principal or Admin">
         <form onSubmit={sendInvite}>
           <Panel className="p-4 space-y-3">
             <div className="grid sm:grid-cols-2 gap-2">
               <label className="block"><span className="block text-sm font-semibold mb-1">Full name</span><input value={name} onChange={e => setName(e.target.value.slice(0, 80))} className={inputClass} /></label>
               <label className="block"><span className="block text-sm font-semibold mb-1">School email</span><input type="email" value={email} onChange={e => setEmail(e.target.value.slice(0, 120))} className={inputClass} /></label>
             </div>
-            <label className="block"><span className="block text-sm font-semibold mb-1">Title</span><input value={title} onChange={e => setTitle(e.target.value.slice(0, 80))} className={inputClass} /></label>
-            <fieldset>
-              <legend className="text-sm font-semibold mb-1">Permissions</legend>
-              <div className="grid sm:grid-cols-2 gap-1">
-                {ALL_PERMS.map(p => (
-                  <label key={p} className="flex items-center gap-2 min-h-10 text-sm">
-                    <input type="checkbox" checked={perms.includes(p)} onChange={e => setPerms(x => (e.target.checked ? [...x, p] : x.filter(y => y !== p)))} className="w-5 h-5" />
-                    {PERMISSION_LABEL[p]}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <label className="block">
+                <span className="block text-sm font-semibold mb-1">Role</span>
+                <select
+                  value={roleChoice}
+                  onChange={e => {
+                    const next = e.target.value === 'PRINCIPAL' ? 'PRINCIPAL' : 'ADMIN';
+                    setRoleChoice(next);
+                    if (next === 'PRINCIPAL' && title === 'Administrator') setTitle('Principal');
+                    if (next === 'ADMIN' && title === 'Principal') setTitle('Administrator');
+                  }}
+                  className={inputClass}
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="PRINCIPAL">Principal</option>
+                </select>
+              </label>
+              <label className="block"><span className="block text-sm font-semibold mb-1">Title</span><input value={title} onChange={e => setTitle(e.target.value.slice(0, 80))} className={inputClass} /></label>
+            </div>
+            {roleChoice === 'ADMIN' ? (
+              <fieldset>
+                <legend className="text-sm font-semibold mb-1">Permissions</legend>
+                <div className="grid sm:grid-cols-2 gap-1">
+                  {ALL_PERMS.map(p => (
+                    <label key={p} className="flex items-center gap-2 min-h-10 text-sm">
+                      <input type="checkbox" checked={perms.includes(p)} onChange={e => setPerms(x => (e.target.checked ? [...x, p] : x.filter(y => y !== p)))} className="w-5 h-5" />
+                      {PERMISSION_LABEL[p]}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : (
+              <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+                Principals receive school-wide governance &amp; approval authority automatically.
+              </p>
+            )}
             <PrimaryButton type="submit" loading={busy} disabled={!name.trim() || !email.trim()}>Create invitation</PrimaryButton>
             {invite && (
               <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm space-y-1">
                 {!USE_BACKEND && <MockLabel>Prototype / mock: no email is sent</MockLabel>}
-                <p>Send this link to the new Admin: <span className="font-mono font-semibold break-all">{window.location.origin}/login?invite={invite}</span></p>
+                <p>Send this link to the new {roleChoice === 'PRINCIPAL' ? 'Principal' : 'Admin'}: <span className="font-mono font-semibold break-all">{window.location.origin}/login?invite={invite}</span></p>
                 <p>Valid 48 hours, single use. They set a password (or link Microsoft/Google) and confirm an email OTP.</p>
               </div>
             )}

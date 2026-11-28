@@ -27,28 +27,46 @@ export const QuickCard: React.FC<{ to: string; icon: React.ReactNode; tint: stri
   </Link>
 );
 
-/** The red notice board banner: the latest notice, linking to the full list. */
+/** Calm notice board card: elevated white card with soft blue accent and subtle Urgent badge only on EMERGENCY notices. */
 export const NoticeBoardCard: React.FC<{
   to: string;
   heading: string;
   viewAll: string;
   emptyText: string;
-  latest?: { title: string; body: string; date: string } | null;
+  latest?: { title: string; body: string; date: string; priority?: 'NORMAL' | 'IMPORTANT' | 'EMERGENCY' } | null;
   className?: string;
-}> = ({ to, heading, viewAll, emptyText, latest, className }) => (
-  <Link to={to} className={`lift block rounded-3xl bg-gradient-to-br from-rose-600 via-red-600 to-red-700 text-white p-5 shadow-float ring-1 ring-red-700/30 ${className ?? ''}`}>
-    <span className="flex items-center justify-between">
-      <span className="font-bold flex items-center gap-2"><Megaphone className="w-4 h-4" />{heading}</span>
-      <span className="text-sm text-red-100 flex items-center">{viewAll} <ChevronRight className="w-4 h-4" /></span>
-    </span>
-    {latest ? (
-      <span className="block mt-2">
-        <span className="block text-sm font-semibold">{latest.title}</span>
-        <span className="block text-sm text-red-50 line-clamp-2 mt-0.5">{latest.body}</span>
-        <span className="block text-xs text-red-200 mt-1.5">{latest.date}</span>
+}> = ({ to, heading, viewAll, emptyText, latest, className }) => {
+  const isEmergency = latest?.priority === 'EMERGENCY';
+  return (
+    <Link
+      to={to}
+      className={`lift block rounded-3xl bg-white text-slate-900 p-5 shadow-card border border-slate-200/80 ring-1 ring-slate-900/5 ${
+        isEmergency ? 'border-l-4 border-l-rose-500' : ''
+      } ${className ?? ''}`}
+    >
+      <span className="flex items-center justify-between gap-2">
+        <span className="font-bold flex items-center gap-2 text-slate-900">
+          <span className={`w-7 h-7 rounded-xl grid place-items-center ${isEmergency ? 'bg-rose-50 text-rose-700' : 'bg-blue-50 text-blue-700'}`}>
+            <Megaphone className="w-4 h-4" />
+          </span>
+          {heading}
+          {isEmergency && (
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+              Urgent
+            </span>
+          )}
+        </span>
+        <span className="text-sm font-medium text-blue-700 flex items-center shrink-0">{viewAll} <ChevronRight className="w-4 h-4" /></span>
       </span>
-    ) : (
-      <span className="block mt-2 text-sm text-red-100">{emptyText}</span>
-    )}
-  </Link>
-);
+      {latest ? (
+        <span className="block mt-2.5">
+          <span className="block text-sm font-semibold text-slate-900">{latest.title}</span>
+          <span className="block text-sm text-slate-600 line-clamp-2 mt-0.5">{latest.body}</span>
+          <span className="block text-xs text-slate-500 mt-1.5">{latest.date}</span>
+        </span>
+      ) : (
+        <span className="block mt-2 text-sm text-slate-500">{emptyText}</span>
+      )}
+    </Link>
+  );
+};

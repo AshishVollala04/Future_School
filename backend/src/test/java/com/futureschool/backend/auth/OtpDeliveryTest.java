@@ -90,15 +90,21 @@ class OtpDeliveryTest {
 
     @Test
     void productionRefusesUnsafeSettings() {
-        MockEnvironment dev = new MockEnvironment().withProperty("app.otp.dev-reveal", "true").withProperty("app.seed.demo-data", "true")
+        MockEnvironment dev = new MockEnvironment().withProperty("app.otp.dev-reveal", "true")
+                .withProperty("app.otp.fixed-code", "123456")
+                .withProperty("app.seed.demo-data", "true")
+                .withProperty("app.seed.future-school", "true")
                 .withProperty("jwt.secret", "FutureschoolSecretKeyForJwtTokenGenerationSecurityMustBe256BitsLongAtLeast123456")
                 .withProperty("app.cors.allowed-origins", "http://localhost:5173").withProperty("spring.jpa.hibernate.ddl-auto", "update");
         dev.setActiveProfiles("prod");
         IllegalStateException e = assertThrows(IllegalStateException.class, () -> new ProductionSafetyCheck(dev).afterPropertiesSet());
-        assertTrue(e.getMessage().contains("dev-reveal") && e.getMessage().contains("demo-data") && e.getMessage().contains("jwt.secret")
+        assertTrue(e.getMessage().contains("dev-reveal") && e.getMessage().contains("fixed-code")
+                && e.getMessage().contains("demo-data") && e.getMessage().contains("future-school")
+                && e.getMessage().contains("jwt.secret")
                 && e.getMessage().contains("sms.provider") && e.getMessage().contains("cors") && e.getMessage().contains("ddl-auto"), e.getMessage());
 
         MockEnvironment safe = new MockEnvironment().withProperty("app.otp.dev-reveal", "false").withProperty("app.seed.demo-data", "false")
+                .withProperty("app.otp.fixed-code", "").withProperty("app.seed.future-school", "false")
                 .withProperty("app.otp.sms.provider", "http").withProperty("app.otp.email.provider", "smtp")
                 .withProperty("jwt.secret", "x".repeat(64)).withProperty("app.cors.allowed-origins", "https://app.futureschool.in")
                 .withProperty("spring.jpa.hibernate.ddl-auto", "validate");
@@ -107,5 +113,29 @@ class OtpDeliveryTest {
 
         MockEnvironment notProd = new MockEnvironment().withProperty("app.otp.dev-reveal", "true");
         assertDoesNotThrow(() -> new ProductionSafetyCheck(notProd).afterPropertiesSet(), "development is not blocked");
+    }
+
+    @Test
+    void fixedCodePersistsDevCodeAndVerifiesViaChallengeRepository() {
+        var repo = mock(com.futureschool.backend.repository.OtpChallengeRepository.class);
+        when(repo.countByDestinationAndCreatedAtAfter(anyString(), any())).thenReturn(0L);
+        var savedRef = new AtomicReference<com.futureschool.backend.entity.OtpChallenge>();
+        when(repo.save(any())).thenAnswer(inv -> {
+            var ch = (com.futureschool.backend.entity.OtpChallenge) inv.getArgument(0);
+            savedRef.set(ch);
+            return ch;
+        });
+        when(repo.findById(anyString())).thenAnswer(inv -> java.util.Optional.ofNullable(savedRef.get()));
+
+        OtpSender noopSender = (channel, dest, code, purpose) -> {};
+        OtpService svc = new OtpService(repo, noopSender, "test-pepper-secret-01234567890123456789", true, 50, "123456");
+        OtpService.ChallengeView issued = svc.issue("SMS", "9876543210", "PARENT_LOGIN", null);
+
+        assertEquals("123456", issued.devCode());
+        assertNotNull(savedRef.get());
+        assertEquals("123456", savedRef.get().getDevCode());
+
+        var verified = svc.verify(issued.challengeId(), "123456", "PARENT_LOGIN", null);
+        assertTrue(verified.isConsumed());
     }
 }

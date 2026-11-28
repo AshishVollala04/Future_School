@@ -97,7 +97,7 @@ export interface AuthService {
   /** Permissions of an active Admin membership in a school; empty for other roles. */
   getAdminPermissions(schoolId: string, accountId: string): AdminPermission[];
   listSchoolAccounts(scope: Scope): Promise<Result<StaffAccountView[]>>;
-  inviteAdmin(scope: Scope, req: { name: string; email: string; title: string; permissions: AdminPermission[] }): Promise<Result<{ token: string; expiresAt: number }>>;
+  inviteAdmin(scope: Scope, req: { name: string; email: string; title: string; permissions: AdminPermission[]; role?: 'PRINCIPAL' | 'ADMIN' }): Promise<Result<{ token: string; expiresAt: number }>>;
   /** Suspend / reactivate an Admin. Never deletes. Keeps at least two active Admins. */
   setAdminStatus(scope: Scope, accountId: string, status: 'ACTIVE' | 'DISABLED', reason: string, stepUpToken: string): Promise<Result<StaffAccountView>>;
 
